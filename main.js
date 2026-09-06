@@ -342,9 +342,87 @@ var require_license = __commonJS({
   }
 });
 
+// core/ai-presets.js
+var require_ai_presets = __commonJS({
+  "core/ai-presets.js"(exports2, module2) {
+    "use strict";
+    var PRESETS = {
+      qwen: { name: "\u901A\u4E49\u5343\u95EE\uFF08\u767E\u70BC\uFF09", baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1", model: "qwen3.8-flash", visionModel: "qwen3.8-flash" },
+      glm: { name: "GLM\uFF08\u667A\u8C31\uFF09", baseUrl: "https://open.bigmodel.cn/api/paas/v4", model: "glm-5.2", visionModel: "glm-4.6v-flash" },
+      minimax: { name: "MiniMax", baseUrl: "https://api.minimax.cn/v1", model: "MiniMax-M3", visionModel: "MiniMax-M3" },
+      kimi: { name: "Kimi", baseUrl: "https://api.moonshot.cn/v1", model: "kimi-k2.6", visionModel: "kimi-k2.6" },
+      deepseek: { name: "DeepSeek", baseUrl: "https://api.deepseek.com/v1", model: "deepseek-chat" },
+      siliconflow: { name: "\u7845\u57FA\u6D41\u52A8", baseUrl: "https://api.siliconflow.cn/v1", model: "Qwen/Qwen3.5-35B-A3B", visionModel: "Qwen/Qwen3-VL-8B-Instruct" },
+      custom: { name: "\u81EA\u5B9A\u4E49\uFF08OpenAI \u517C\u5BB9\uFF09", baseUrl: "", model: "" }
+    };
+    var ASR_PRESETS = { dashscope: { name: "DashScope\uFF08\u767E\u70BC\uFF09", model: "paraformer-v2" }, siliconflow: { name: "\u7845\u57FA\u6D41\u52A8", model: "FunAudioLLM/SenseVoiceSmall" } };
+    function inferProvider(config) {
+      if (config?.provider && PRESETS[config.provider]) return config.provider;
+      let host;
+      try {
+        host = new URL(config?.baseUrl || "").hostname;
+      } catch {
+        return "custom";
+      }
+      if (host === "api.minimaxi.com" || host === "api.minimax.cn") return "minimax";
+      return Object.keys(PRESETS).find((id) => PRESETS[id].baseUrl && new URL(PRESETS[id].baseUrl).hostname === host) || "custom";
+    }
+    function selectProvider(config, id, kind = "chat") {
+      const preset = PRESETS[id];
+      if (!preset) throw Error("\u672A\u77E5\u670D\u52A1\u5546");
+      const old = inferProvider(config);
+      const keys = { ...config.keys || {}, [old]: config.key || "" };
+      if (id === "custom") return { ...config, provider: id, keys, key: keys[id] || "", baseUrl: old === "custom" ? config.baseUrl : "", model: old === "custom" ? config.model : "" };
+      return { ...config, provider: id, keys, key: keys[id] || "", baseUrl: preset.baseUrl, model: kind === "vision" ? preset.visionModel : preset.model };
+    }
+    function responseOptions(model) {
+      const m = String(model || "").toLowerCase();
+      if (/^kimi-k2\.[56]/.test(m)) return { thinking: { type: "disabled" }, temperature: 0.6 };
+      if (/^minimax-m3/.test(m)) return { thinking: { type: "disabled" }, reasoning_split: true };
+      if (/^glm-/.test(m)) return { thinking: { type: "disabled" } };
+      if (/^qwen(?!\/)/.test(m)) return { enable_thinking: false };
+      return {};
+    }
+    module2.exports = { PRESETS, ASR_PRESETS, inferProvider, selectProvider, responseOptions };
+  }
+});
+
+// core/cloud-service.js
+var require_cloud_service = __commonJS({
+  "core/cloud-service.js"(exports2, module2) {
+    var SERVICE_BASE = "https://second-d9gqkrz0kb7428201-1300807960.ap-shanghai.app.tcloudbase.com/savault/v1";
+    var MODEL = "Qwen/Qwen3.5-35B-A3B";
+    function aiHeaders(key) {
+      const headers = { Authorization: "Bearer " + key };
+      if (String(key || "").startsWith("sv_")) headers["Idempotency-Key"] = require("crypto").randomUUID();
+      return headers;
+    }
+    var errors = { INVALID_CARD: "\u5151\u6362\u5361\u65E0\u6548\u6216\u5DF2\u505C\u7528\uFF0C\u8BF7\u6838\u5BF9\u5361\u53F7", RATE_LIMIT: "\u64CD\u4F5C\u8F83\u9891\u7E41\uFF0C\u8BF7\u7A0D\u540E\u91CD\u8BD5", INVALID_KEY: "\u670D\u52A1 Key \u65E0\u6548\u6216\u5DF2\u505C\u7528", QUOTA_EXHAUSTED: "AI \u989D\u5EA6\u4E0D\u8DB3\uFF0C\u672C\u6B21\u6CA1\u6709\u8C03\u7528\u6A21\u578B", SERVICE_BUDGET_EXHAUSTED: "\u4E91\u670D\u52A1\u6682\u65F6\u4E0D\u53EF\u7528\uFF0C\u8BF7\u7A0D\u540E\u91CD\u8BD5", REQUEST_PENDING_RECONCILIATION: "\u8BF7\u6C42\u7ED3\u679C\u6B63\u5728\u6838\u5BF9\uFF0C\u8BF7\u52FF\u91CD\u590D\u63D0\u4EA4" };
+    function checked(body) {
+      if (body?.error) throw Error(errors[body.error.code] || "\u4E91\u670D\u52A1\u6682\u65F6\u4E0D\u53EF\u7528");
+      return body;
+    }
+    async function redeem(http, card) {
+      const value = String(card || "").trim();
+      if (!/^SVC_[A-Za-z0-9_-]{43}$/.test(value)) throw Error("\u8BF7\u586B\u5199\u5B8C\u6574\u7684 SVC_ \u5151\u6362\u5361");
+      const body = checked(await http.json(SERVICE_BASE + "/redeem", { method: "POST", body: { card: value } }));
+      if (!/^sv_[A-Za-z0-9_-]{43}$/.test(body?.key) || typeof body.license !== "string") throw Error("\u5151\u6362\u7ED3\u679C\u4E0D\u5B8C\u6574\uFF0C\u8BF7\u91CD\u8BD5");
+      return { ...body, baseUrl: SERVICE_BASE, model: MODEL };
+    }
+    async function balance(http, key) {
+      const b = checked(await http.json(SERVICE_BASE + "/balance", { headers: { Authorization: "Bearer " + key } }));
+      if (!Number.isSafeInteger(b?.aiMicroYuanAvailable) || !Number.isSafeInteger(b?.asrSecondsAvailable)) throw Error("\u4F59\u989D\u8FD4\u56DE\u5F02\u5E38");
+      return b;
+    }
+    module2.exports = { SERVICE_BASE, MODEL, aiHeaders, redeem, balance, checked };
+  }
+});
+
 // core/ai.js
 var require_ai = __commonJS({
   "core/ai.js"(exports2, module2) {
+    var { responseOptions } = require_ai_presets();
+    var { aiHeaders, checked: checkedCloudResponse } = require_cloud_service();
     function stripThink(text) {
       if (!text) return "";
       let s = String(text);
@@ -406,15 +484,17 @@ ${meta}
       try {
         const body = await c.http.json(base + "/chat/completions", {
           method: "POST",
-          headers: { Authorization: "Bearer " + c.apiKey },
+          headers: aiHeaders(c.apiKey),
           body: {
             model: c.model || "deepseek-chat",
             messages: [{ role: "user", content: buildPrompt(c.item, c.content) }],
             max_tokens: c.maxTokens || 1200,
             // 明确关掉思考：支持的网关会省一半 token，不支持的忽略该字段
-            ...c.disableThinking ? { thinking: { type: "disabled" } } : {}
+            ...c.disableThinking ? { thinking: { type: "disabled" } } : {},
+            ...responseOptions(c.model)
           }
         });
+        if (String(c.apiKey).startsWith("sv_")) checkedCloudResponse(body);
         const r = extractMessage(body);
         if (r.hadReasoning && !r.text) {
           log("[ai] \u6A21\u578B\u53EA\u8FD4\u56DE\u4E86\u601D\u8003\u8FC7\u7A0B\uFF08reasoning_content\uFF09\uFF0C\u6CA1\u6709\u6B63\u5F0F\u56DE\u7B54");
@@ -436,13 +516,14 @@ ${meta}
       if (!c.apiKey) return { ok: false, msg: "\u8BF7\u5148\u586B API Key" };
       try {
         const body = await c.http.json(base + "/models", {
-          headers: { Authorization: "Bearer " + c.apiKey }
+          headers: aiHeaders(c.apiKey)
         });
+        if (body?.error || body?.base_resp?.status_code) return { ok: false, msg: "\u8FDE\u63A5\u672A\u901A\u8FC7\uFF0C\u8BF7\u68C0\u67E5 Key\u3001\u63A5\u53E3\u5730\u5740\u53CA\u8D26\u6237\u6743\u9650" };
         const list = body && body.data;
         if (Array.isArray(list)) {
           return { ok: true, msg: `\u8FDE\u63A5\u6210\u529F\uFF0C\u53EF\u7528\u6A21\u578B ${list.length} \u4E2A`, models: list.map((m) => m.id).slice(0, 50) };
         }
-        return { ok: true, msg: "\u8FDE\u63A5\u6210\u529F\uFF08\u63A5\u53E3\u672A\u8FD4\u56DE\u6A21\u578B\u5217\u8868\uFF0C\u4F46\u9274\u6743\u901A\u8FC7\uFF09" };
+        return { ok: false, msg: "\u672A\u8FD4\u56DE\u6709\u6548\u6A21\u578B\u5217\u8868\uFF0C\u6682\u65F6\u65E0\u6CD5\u786E\u8BA4\u8FDE\u63A5\uFF1B\u8BF7\u6838\u5BF9\u5730\u5740\u6216\u7528\u5B9E\u9645\u8BF7\u6C42\u9A8C\u8BC1" };
       } catch (e) {
         const s = String(e.message || e);
         if (/401|Unauthorized/i.test(s)) return { ok: false, msg: "API Key \u65E0\u6548\u6216\u5DF2\u8FC7\u671F" };
@@ -761,13 +842,73 @@ var require_transcript = __commonJS({
   }
 });
 
+// core/transcription-service.js
+var require_transcription_service = __commonJS({
+  "core/transcription-service.js"(exports2, module2) {
+    "use strict";
+    var { transcribeViaDashscope } = require_transcript();
+    async function transcribe(o) {
+      const provider = o.provider || "dashscope";
+      if (provider === "dashscope") return transcribeViaDashscope(o);
+      if (provider !== "siliconflow") throw Error("\u8F6C\u5199\u4EC5\u652F\u6301\u7845\u57FA\u6D41\u52A8\u6216 DashScope");
+      if (!o.apiKey) throw Error("\u8BF7\u5148\u586B\u5199\u7845\u57FA\u6D41\u52A8\u8F6C\u5199 Key");
+      if (Number(o.durationSeconds) > 3600) throw Error("\u7845\u57FA\u6D41\u52A8\u5355\u6B21\u8F6C\u5199\u6700\u591A 1 \u5C0F\u65F6\uFF0C\u8BF7\u5206\u6BB5\u540E\u91CD\u8BD5");
+      const bytes = Buffer.from(o.audioBytes || await o.http.binary(o.videoUrl));
+      if (!bytes.length || bytes.length > 50 * 1024 * 1024) throw Error("\u8F6C\u5199\u6587\u4EF6\u987B\u5C0F\u4E8E 50MB\uFF0C\u8BF7\u5206\u6BB5\u540E\u91CD\u8BD5");
+      const boundary = "savault-" + require("crypto").randomBytes(16).toString("hex");
+      const model = o.model || "FunAudioLLM/SenseVoiceSmall";
+      if (!["FunAudioLLM/SenseVoiceSmall", "TeleAI/TeleSpeechASR"].includes(model)) throw Error("\u4E0D\u652F\u6301\u7684\u7845\u57FA\u6D41\u52A8\u8F6C\u5199\u6A21\u578B");
+      const name = /^[\w.-]+$/.test(o.filename || "") ? o.filename : "audio.mp4";
+      const data = Buffer.concat([Buffer.from("--" + boundary + '\r\nContent-Disposition: form-data; name="model"\r\n\r\n' + model + "\r\n--" + boundary + '\r\nContent-Disposition: form-data; name="file"; filename="' + name + '"\r\nContent-Type: application/octet-stream\r\n\r\n'), bytes, Buffer.from("\r\n--" + boundary + "--\r\n")]);
+      const r = await o.http.fetch("https://api.siliconflow.cn/v1/audio/transcriptions", { method: "POST", headers: { Authorization: "Bearer " + o.apiKey, "Content-Type": "multipart/form-data; boundary=" + boundary }, body: data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) });
+      if (r.status < 200 || r.status >= 300) throw Error("\u7845\u57FA\u6D41\u52A8\u8F6C\u5199\u5931\u8D25\uFF08HTTP " + r.status + "\uFF09\uFF0C\u8BF7\u68C0\u67E5\u989D\u5EA6\u3001\u6587\u4EF6\u548C Key");
+      const text = r.json?.text;
+      if (typeof text !== "string" || !text.trim()) throw Error("\u7845\u57FA\u6D41\u52A8\u672A\u8FD4\u56DE\u8F6C\u5199\u6587\u672C");
+      return text.trim();
+    }
+    module2.exports = { transcribe };
+  }
+});
+
+// core/vision-service.js
+var require_vision_service = __commonJS({
+  "core/vision-service.js"(exports2, module2) {
+    "use strict";
+    var { extractMessage } = require_ai();
+    var { responseOptions } = require_ai_presets();
+    async function recognizeImages(o) {
+      if (!o.apiKey || !o.baseUrl || !o.model) throw Error("\u8BF7\u5148\u914D\u7F6E\u8BC6\u56FE\u670D\u52A1\u5546\u3001Key \u548C\u6A21\u578B");
+      if (String(o.apiKey).startsWith("sv_")) throw Error("\u5F53\u524D\u4E91\u7AEF\u989D\u5EA6\u4EC5\u652F\u6301\u6587\u5B57\u95EE\u7B54\uFF0C\u8BF7\u586B\u5199\u8BC6\u56FE\u670D\u52A1\u5546\u7684 Key");
+      const images = (o.images || []).slice(0, 4);
+      if (!images.length) throw Error("\u6CA1\u6709\u53EF\u8BC6\u522B\u7684\u56FE\u7247");
+      const content = [{ type: "text", text: "\u8BF7\u63D0\u53D6\u56FE\u7247\u4E2D\u7684\u6587\u5B57\u4E0E\u5173\u952E\u77E5\u8BC6\uFF0C\u6309\u56FE\u7247\u987A\u5E8F\u6574\u7406\u6210\u7B80\u6D01\u7684\u4E2D\u6587\u7B14\u8BB0\u3002\u5FE0\u5B9E\u4FDD\u7559\u6570\u5B57\u548C\u539F\u610F\uFF0C\u770B\u4E0D\u6E05\u7684\u5730\u65B9\u6807\u6CE8\u4E0D\u786E\u5B9A\uFF0C\u4E0D\u8981\u7F16\u9020\u3002" }];
+      for (const image of images) {
+        const bytes = Buffer.from(image.bytes || await o.http.binary(image.url));
+        if (bytes.length > 10 * 1024 * 1024) throw Error("\u5355\u5F20\u8BC6\u56FE\u56FE\u7247\u4E0D\u80FD\u8D85\u8FC7 10MB");
+        let mime = image.mime || "image/jpeg";
+        if (bytes[0] === 137 && bytes[1] === 80) mime = "image/png";
+        else if (bytes.toString("ascii", 0, 4) === "RIFF") mime = "image/webp";
+        else if (bytes.toString("ascii", 0, 3) === "GIF") mime = "image/gif";
+        content.push({ type: "image_url", image_url: { url: "data:" + mime + ";base64," + bytes.toString("base64") } });
+      }
+      const r = await o.http.json(String(o.baseUrl).replace(/\/+$/, "") + "/chat/completions", { method: "POST", headers: { Authorization: "Bearer " + o.apiKey }, body: { model: o.model, messages: [{ role: "user", content }], max_tokens: 2e3, stream: false, ...responseOptions(o.model) } });
+      if (r?.error || r?.base_resp?.status_code || r?.code) throw Error("\u8BC6\u56FE\u8BF7\u6C42\u5931\u8D25\uFF0C\u8BF7\u68C0\u67E5\u6A21\u578B\u6743\u9650\u548C\u989D\u5EA6");
+      const text = extractMessage(r).text;
+      if (!text) throw Error("\u8BC6\u56FE\u670D\u52A1\u6CA1\u6709\u8FD4\u56DE\u6B63\u6587");
+      return text;
+    }
+    module2.exports = { recognizeImages };
+  }
+});
+
 // core/engine.js
 var require_engine = __commonJS({
   "core/engine.js"(exports2, module2) {
     var sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     var { renderNote, buildFileName, buildDirPath } = require_render();
     var { summarize } = require_ai();
-    var { transcribeViaDashscope } = require_transcript();
+    var { transcribe } = require_transcription_service();
+    var { recognizeImages } = require_vision_service();
     async function sync(opts) {
       const o = opts || {};
       const provider = o.provider;
@@ -913,15 +1054,26 @@ var require_engine = __commonJS({
             if (detail.videoUrl && !item.videoUrl) item.videoUrl = detail.videoUrl;
             if (!item.transcript && enrich.transcript && enrich.asr && enrich.asr.apiKey && item.videoUrl) {
               try {
-                item.transcript = await transcribeViaDashscope({
+                item.transcript = await transcribe({
                   http,
                   apiKey: enrich.asr.apiKey,
+                  provider: enrich.asr.provider,
+                  durationSeconds: item.duration,
                   videoUrl: item.videoUrl,
                   model: enrich.asr.model,
                   logger: log
                 });
               } catch (e) {
                 log(`[engine] ASR \u8F6C\u5199\u5931\u8D25 ${item.sourceId}\uFF1A${e.message}\uFF08\u7B14\u8BB0\u7167\u5199\uFF0C\u65E0\u8F6C\u5199\uFF09`);
+              }
+            }
+            if (enrich.vision?.enabled && enrich.vision.apiKey && !item.videoUrl) {
+              const images = (detail.media || item.media || []).filter((u) => typeof u === "string" && /^https?:\/\//.test(u)).slice(0, 4);
+              if (images.length) try {
+                const recognized = await recognizeImages({ ...enrich.vision, http, images: images.map((url) => ({ url })) });
+                item.content = (item.content || "") + "\n\n## \u56FE\u7247\u89E3\u8BFB\n\n" + recognized;
+              } catch (e) {
+                log("[engine] \u8BC6\u56FE\u5931\u8D25\uFF1A" + e.message + "\uFF08\u539F\u6587\u7167\u5E38\u4FDD\u5B58\uFF09");
               }
             }
             let aiText = "";
@@ -2233,6 +2385,7 @@ var require_obsidian = __commonJS({
       const d = deps || {};
       const vault = d.vault;
       const http = d.http;
+      const metadataCache = d.metadataCache || vault && vault.metadataCache;
       const opts = d.opts || {};
       if (!vault) throw new Error("obsidian target \u9700\u8981 vault");
       const toPath = (p) => normalizePath(p);
@@ -2261,7 +2414,7 @@ var require_obsidian = __commonJS({
           if (!item || !item.sourceId) return false;
           const files = vault.getMarkdownFiles ? vault.getMarkdownFiles() : [];
           for (const f of files) {
-            const cache = vault.metadataCache && vault.metadataCache.getFileCache(f);
+            const cache = metadataCache && metadataCache.getFileCache(f);
             const fm = cache && cache.frontmatter;
             if (fm && (fm.source_id === item.sourceId || fm.sourceId === item.sourceId)) return true;
           }
@@ -2275,7 +2428,7 @@ var require_obsidian = __commonJS({
           if (!item || !item.sourceId) return null;
           const files = vault.getMarkdownFiles ? vault.getMarkdownFiles() : [];
           for (const f of files) {
-            const cache = vault.metadataCache && vault.metadataCache.getFileCache(f);
+            const cache = metadataCache && metadataCache.getFileCache(f);
             const fm = cache && cache.frontmatter;
             if (fm && (fm.source_id === item.sourceId || fm.sourceId === item.sourceId)) return f.path;
           }
@@ -2888,6 +3041,8 @@ var require_search = __commonJS({
 // core/chat.js
 var require_chat = __commonJS({
   "core/chat.js"(exports2, module2) {
+    var { responseOptions } = require_ai_presets();
+    var { aiHeaders, checked: checkedCloudResponse } = require_cloud_service();
     var { stripThink } = require_ai();
     function estTokens(text) {
       const s = String(text == null ? "" : text);
@@ -3007,14 +3162,15 @@ ${contextText}
         try {
           body = await http.json(base + "/chat/completions", {
             method: "POST",
-            headers: { Authorization: "Bearer " + d.apiKey },
+            headers: aiHeaders(d.apiKey),
             body: {
               model: d.model || "deepseek-chat",
               messages,
               max_tokens: Number(o.maxTokens) || 1500,
               temperature: o.temperature == null ? 0.3 : Number(o.temperature),
               stream: false,
-              ...o.disableThinking ? { thinking: { type: "disabled" } } : {}
+              ...o.disableThinking ? { thinking: { type: "disabled" } } : {},
+              ...responseOptions(d.model)
             }
           });
         } catch (e) {
@@ -3024,6 +3180,7 @@ ${contextText}
           if (/timeout|ETIMEDOUT/i.test(s)) throw new Error("\u8BF7\u6C42\u8D85\u65F6\uFF0C\u6362\u4E2A\u6A21\u578B\u6216\u7A0D\u540E\u518D\u8BD5");
           throw new Error("\u8C03\u7528\u5931\u8D25\uFF1A" + s.slice(0, 120));
         }
+        if (String(d.apiKey || "").startsWith("sv_")) checkedCloudResponse(body);
         const choice = body && body.choices && body.choices[0] || {};
         const msg = choice.message || {};
         const answer = stripThink(msg.content || "");
@@ -3101,6 +3258,76 @@ var require_core = __commonJS({
       searchMod,
       chatMod
     };
+  }
+});
+
+// plugin/ai-settings.js
+var require_ai_settings = __commonJS({
+  "plugin/ai-settings.js"(exports2, module2) {
+    var { PRESETS, ASR_PRESETS, inferProvider, selectProvider } = require_ai_presets();
+    function providerFields({ plugin, containerEl, Setting: Setting2, Notice: Notice2, refresh, field, kind = "chat" }) {
+      const c = plugin.settings[field], id = inferProvider(c), p = PRESETS[id];
+      new Setting2(containerEl).setName("\u670D\u52A1\u5546").setDesc("\u9009\u62E9\u540E\u81EA\u52A8\u586B\u5199\u5B98\u65B9\u5730\u5740\u548C\u6A21\u578B\uFF1B\u5404\u5382\u5546 Key \u5206\u5F00\u4FDD\u5B58\u3002").addDropdown((d) => {
+        for (const [k, v] of Object.entries(PRESETS)) if (kind !== "vision" || v.visionModel || k === "custom") d.addOption(k, v.name);
+        d.setValue(id).onChange(async (v) => {
+          plugin.settings[field] = selectProvider(c, v, kind);
+          await plugin.saveSettings();
+          refresh();
+        });
+      });
+      new Setting2(containerEl).setName("API Key").setDesc("\u76F4\u63A5\u8C03\u7528\u6240\u9009\u670D\u52A1\u5546\uFF0C\u8D39\u7528\u8D70\u4F60\u7684\u8D26\u6237\u3002").addText((t) => {
+        t.inputEl.type = "password";
+        t.setPlaceholder("\u7C98\u8D34\u6240\u9009\u5382\u5546\u7684 Key").setValue(c.key || "").onChange(async (v) => {
+          c.key = v.trim();
+          c.keys = { ...c.keys || {}, [id]: c.key };
+          await plugin.saveSettings();
+        });
+      });
+      new Setting2(containerEl).setName("\u63A5\u53E3\u5730\u5740").setDesc(id === "custom" ? "\u586B\u5199 OpenAI \u517C\u5BB9\u63A5\u53E3\u7684\u57FA\u7840\u5730\u5740" : "\u5DF2\u81EA\u52A8\u586B\u5199\uFF1B\u5982\u9700\u5176\u4ED6\u5730\u57DF\u6216\u4E2D\u8F6C\u5730\u5740\uFF0C\u8BF7\u9009\u62E9\u81EA\u5B9A\u4E49\u3002").addText((t) => t.setValue(c.baseUrl || "").setDisabled(id !== "custom").onChange(async (v) => {
+        c.baseUrl = v.trim();
+        await plugin.saveSettings();
+      }));
+      new Setting2(containerEl).setName("\u6A21\u578B").setDesc("\u5DF2\u9884\u586B\u9ED8\u8BA4\u6A21\u578B\uFF0C\u4E5F\u53EF\u586B\u5199\u8D26\u6237\u6709\u6743\u9650\u8C03\u7528\u7684\u6A21\u578B\u3002").addText((t) => t.setValue(c.model || "").onChange(async (v) => {
+        c.model = v.trim();
+        await plugin.saveSettings();
+      }));
+      new Setting2(containerEl).setName("\u8FDE\u63A5\u6D4B\u8BD5").addButton((b) => b.setButtonText("\u6D4B\u8BD5").onClick(async () => {
+        b.setDisabled(true);
+        try {
+          const r = await require_ai().testConnection({ http: plugin.http, baseUrl: c.baseUrl, apiKey: c.key });
+          new Notice2(r.msg);
+        } catch (e) {
+          new Notice2(e.message);
+        } finally {
+          b.setDisabled(false);
+        }
+      }));
+    }
+    function transcriptionFields({ plugin, containerEl, Setting: Setting2, refresh }) {
+      const c = plugin.settings.transcription;
+      new Setting2(containerEl).setName("\u8F6C\u5199\u670D\u52A1\u5546").setDesc("\u4EC5\u652F\u6301\u7845\u57FA\u6D41\u52A8\u4E0E DashScope\uFF1B\u5DF2\u6709\u539F\u751F\u5B57\u5E55\u65F6\u4F18\u5148\u8BFB\u53D6\u5B57\u5E55\u3002").addDropdown((d) => {
+        for (const [id, p] of Object.entries(ASR_PRESETS)) d.addOption(id, p.name);
+        d.setValue(c.provider).onChange(async (id) => {
+          c.keys = { ...c.keys || {}, [c.provider]: c.key || "" };
+          c.provider = id;
+          c.key = c.keys[id] || "";
+          c.model = ASR_PRESETS[id].model;
+          await plugin.saveSettings();
+          refresh();
+        });
+      });
+      new Setting2(containerEl).setName("\u8F6C\u5199 API Key").setDesc(c.provider === "siliconflow" ? "\u6587\u4EF6\u6700\u5927 50MB\u3001\u6700\u957F 1 \u5C0F\u65F6\uFF1B\u8D39\u7528\u8D70\u4F60\u7684\u7845\u57FA\u6D41\u52A8\u8D26\u6237\u3002" : "\u4F7F\u7528\u767E\u70BC\u5317\u4EAC\u5730\u57DF\u7684 Key\uFF0C\u8D39\u7528\u8D70\u4F60\u7684\u8D26\u6237\u3002").addText((t) => {
+        t.inputEl.type = "password";
+        t.setValue(c.key || "").setPlaceholder("\u7C98\u8D34\u8F6C\u5199\u670D\u52A1\u7684 Key").onChange(async (v) => {
+          c.key = v.trim();
+          c.keys = { ...c.keys || {}, [c.provider]: c.key };
+          if (c.provider === "dashscope") plugin.settings.dashscopeKey = c.key;
+          await plugin.saveSettings();
+        });
+      });
+      new Setting2(containerEl).setName("\u8F6C\u5199\u6A21\u578B").setDesc(ASR_PRESETS[c.provider].model);
+    }
+    module2.exports = { providerFields, transcriptionFields };
   }
 });
 
@@ -5467,6 +5694,70 @@ var require_qrcode2 = __commonJS({
   }
 });
 
+// core/note-transcript.js
+var require_note_transcript = __commonJS({
+  "core/note-transcript.js"(exports2, module2) {
+    function hasTranscript2(text) {
+      return /^## 逐字稿\s*$/m.test(text);
+    }
+    function appendTranscript2(text, transcript) {
+      if (!String(transcript || "").trim() || hasTranscript2(text)) return text;
+      return text + (text.endsWith("\n") ? "\n" : "\n\n") + "## \u9010\u5B57\u7A3F\n\n" + transcript.trim() + "\n";
+    }
+    module2.exports = { hasTranscript: hasTranscript2, appendTranscript: appendTranscript2 };
+  }
+});
+
+// plugin/bili-request.js
+var require_bili_request = __commonJS({
+  "plugin/bili-request.js"(exports2, module2) {
+    function nodeGet(options) {
+      return new Promise((resolve, reject) => {
+        const req = require("https").get(options.url, { headers: options.headers }, (res) => {
+          const chunks = [];
+          let size = 0;
+          res.on("error", reject);
+          res.on("data", (chunk) => {
+            size += chunk.length;
+            if (size > 8 * 1024 * 1024) {
+              req.destroy(new Error("B \u7AD9\u63A5\u53E3\u54CD\u5E94\u8FC7\u5927"));
+              return;
+            }
+            chunks.push(chunk);
+          });
+          res.on("end", () => {
+            const buf = Buffer.concat(chunks), text = buf.toString("utf8");
+            let json = null;
+            try {
+              json = JSON.parse(text);
+            } catch (_) {
+            }
+            resolve({
+              status: res.statusCode,
+              headers: res.headers,
+              text,
+              json,
+              arrayBuffer: buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength)
+            });
+          });
+        });
+        req.setTimeout(2e4, () => req.destroy(new Error("B \u7AD9\u63A5\u53E3\u8BF7\u6C42\u8D85\u65F6")));
+        req.on("error", reject);
+      });
+    }
+    async function requestWithBiliFallback2(primary, options, fallback = nodeGet) {
+      try {
+        return await primary(options);
+      } catch (error) {
+        const url = new URL(options.url);
+        if (url.protocol !== "https:" || url.hostname !== "api.bilibili.com" || url.port && url.port !== "443" || url.username || url.password || (options.method || "GET") !== "GET" || options.body || !String(error.message).includes("ERR_BLOCKED_BY_CLIENT")) throw error;
+        return fallback(options);
+      }
+    }
+    module2.exports = { requestWithBiliFallback: requestWithBiliFallback2 };
+  }
+});
+
 // plugin/main.js
 var {
   Plugin,
@@ -5478,12 +5769,17 @@ var {
   ItemView
 } = require("obsidian");
 var core = require_core();
+var cloudService = require_cloud_service();
+var aiPresets = require_ai_presets();
+var aiSettings = require_ai_settings();
 var { createWebviewHost } = require_webview_host();
 var qrcode = require_qrcode2();
+var { appendTranscript, hasTranscript } = require_note_transcript();
+var { requestWithBiliFallback } = require_bili_request();
 var FREE_QUOTA = 50;
 var CHAT_VIEW_TYPE = "knowledge-bridge-chat-view";
 var CHAT_INDEX_TTL_MS = 5 * 60 * 1e3;
-var PLATFORM_ORDER = ["xiaohongshu", "bilibili", "xiaoyuzhou", "twitter"];
+var PLATFORM_ORDER = ["xiaohongshu", "bilibili"];
 var DEFAULT_SETTINGS = {
   version: 2,
   licenseKey: "",
@@ -5505,7 +5801,10 @@ var DEFAULT_SETTINGS = {
     obsidian: { savePath: "savault/", localizeCover: true, dirTemplate: "{root}/{platform}/{collection}", linkAuthor: true },
     notion: { token: "", parentId: "", parentType: "data_source_id", uploadImages: false }
   },
-  ai: { enabled: false, baseUrl: "https://api.deepseek.com", key: "", model: "deepseek-chat" },
+  ai: { enabled: false, provider: "qwen", baseUrl: aiPresets.PRESETS.qwen.baseUrl, key: "", model: "qwen3.8-flash" },
+  vision: { enabled: false, provider: "qwen", baseUrl: aiPresets.PRESETS.qwen.baseUrl, key: "", model: "qwen3.8-flash" },
+  transcription: { provider: "dashscope", key: "", model: "paraformer-v2" },
+  cloudAi: null,
   // 口播转写（pro）：阿里云百炼 dashscope API key，Paraformer 直接吃视频 URL，不用下载
   dashscopeKey: "",
   // 问收藏（AI 对话）：参考条数与记忆轮数
@@ -5529,7 +5828,7 @@ function makeRequest() {
       url = opts.url;
     }
     const o = opts || {};
-    const r = await requestUrl({
+    const r = await requestWithBiliFallback(requestUrl, {
       url,
       method: o.method || "GET",
       headers: o.headers || {},
@@ -6072,6 +6371,15 @@ var ClipinPlugin = class extends Plugin {
     this.addRibbonIcon("message-circle", "\u77E5\u8BC6\u6865\u6881\uFF1A\u95EE\u6536\u85CF\uFF08AI \u5BF9\u8BDD\uFF09", () => this.openChatView());
     this.addCommand({ id: "clipin-sync", name: "\u540C\u6B65\u6536\u85CF", callback: () => this.syncAll({ askMode: true }) });
     this.addCommand({ id: "clipin-chat", name: "\u95EE\u6536\u85CF\uFF08AI \u5BF9\u8BDD\uFF09", callback: () => this.openChatView() });
+    this.addCommand({
+      id: "clipin-transcript-current",
+      name: "\u4E3A\u5F53\u524D B \u7AD9\u7B14\u8BB0\u8865\u9010\u5B57\u7A3F",
+      callback: () => this.fillCurrentTranscript(this.app.workspace.getActiveFile())
+    });
+    this.registerEvent(this.app.workspace.on("file-menu", (menu, file) => {
+      const fm = this.app.metadataCache.getFileCache(file)?.frontmatter;
+      if (fm?.platform === "bilibili") menu.addItem((item) => item.setTitle("\u77E5\u8BC6\u6865\u6881\uFF1A\u8865\u9010\u5B57\u7A3F").setIcon("captions").onClick(() => this.fillCurrentTranscript(file)));
+    }));
     for (const id of PLATFORM_ORDER) {
       const p = core.getProvider(id);
       if (!p) continue;
@@ -6091,6 +6399,55 @@ var ClipinPlugin = class extends Plugin {
     this.setupAutoSync();
     console.log("[savault] \u5DF2\u52A0\u8F7D\uFF0C\u652F\u6301\u5E73\u53F0\uFF1A" + PLATFORM_ORDER.join(", "));
     this._log("info", `\u63D2\u4EF6\u5DF2\u52A0\u8F7D v${this.manifest && this.manifest.version || "?"}\uFF08\u540C\u6B65\u843D\u76D8\u65E5\u5FD7\u5DF2\u542F\u7528\uFF09`);
+  }
+  async fillCurrentTranscript(file) {
+    if (!file || file.extension !== "md") {
+      new Notice("\u8BF7\u5148\u6253\u5F00\u4E00\u7BC7 B \u7AD9\u7B14\u8BB0");
+      return;
+    }
+    const fm = this.app.metadataCache.getFileCache(file)?.frontmatter;
+    if (fm?.platform !== "bilibili" || !String(fm.source_id || "").startsWith("bilibili:")) {
+      new Notice("\u8BF7\u5728\u77E5\u8BC6\u6865\u6881\u540C\u6B65\u7684 B \u7AD9\u7B14\u8BB0\u4E0A\u4F7F\u7528");
+      return;
+    }
+    if (!this.settings.licenseValid) {
+      new Notice("\u8865\u9010\u5B57\u7A3F\u662F\u6C38\u4E45\u7248\u529F\u80FD");
+      return;
+    }
+    this._transcriptJobs ||= /* @__PURE__ */ new Set();
+    if (this._transcriptJobs.has(file.path)) {
+      new Notice("\u8FD9\u7BC7\u7B14\u8BB0\u6B63\u5728\u8BFB\u53D6\u5B57\u5E55");
+      return;
+    }
+    const jobPath = file.path;
+    this._transcriptJobs.add(jobPath);
+    try {
+      if (hasTranscript(await this.app.vault.read(file))) {
+        new Notice("\u7B14\u8BB0\u5DF2\u6709\u9010\u5B57\u7A3F\uFF0C\u65E0\u9700\u91CD\u590D\u83B7\u53D6");
+        return;
+      }
+      new Notice("\u6B63\u5728\u8BFB\u53D6 B \u7AD9\u5B57\u5E55\u2026");
+      const detail = await core.getProvider("bilibili").fetchDetail({
+        auth: this.settings.platforms.bilibili.auth,
+        http: this.http,
+        item: { id: String(fm.source_id).slice("bilibili:".length) }
+      });
+      if (detail.error) throw new Error(detail.error);
+      if (!detail.transcript) {
+        new Notice("\u8FD9\u4E2A\u89C6\u9891\u6CA1\u6709\u53EF\u8BFB\u53D6\u7684\u5B57\u5E55\u3002B \u7AD9\u97F3\u9891\u8F6C\u5199\u5C1A\u672A\u63A5\u901A\uFF0C\u672C\u6B21\u6CA1\u6709\u8C03\u7528\u4ED8\u8D39\u8F6C\u5199\u3002", 9e3);
+        this._log("info", "[transcript] B \u7AD9\u89C6\u9891\u65E0\u53EF\u7528\u5B57\u5E55");
+        return;
+      }
+      await this.app.vault.process(file, (current) => appendTranscript(current, detail.transcript));
+      this.invalidateChatIndex();
+      this._log("info", "[transcript] \u5F53\u524D\u7B14\u8BB0\u5DF2\u8865\u9010\u5B57\u7A3F\uFF0C\u4FDD\u7559\u539F\u6587");
+      new Notice("\u9010\u5B57\u7A3F\u5DF2\u8865\u5230\u7B14\u8BB0\u672B\u5C3E\uFF0C\u539F\u6587\u548C\u6279\u6CE8\u5DF2\u4FDD\u7559");
+    } catch (e) {
+      this._log("error", "[transcript] " + e.message);
+      new Notice("\u8865\u9010\u5B57\u7A3F\u5931\u8D25\uFF1A" + e.message, 8e3);
+    } finally {
+      this._transcriptJobs.delete(jobPath);
+    }
   }
   onUnload() {
     this._markCleanExit("Obsidian \u5173\u95ED\u6216\u63D2\u4EF6\u88AB\u7981\u7528/\u91CD\u8F7D");
@@ -6359,10 +6716,11 @@ var ClipinPlugin = class extends Plugin {
       }
       new CollectionPickerModal(this.app, list, sel, async (chosen) => {
         cfg.collections = chosen;
+        cfg.collectionLabels = Object.fromEntries(list.map((it) => [String(it.id || it.title), it.title]));
         cfg.collectionsConfirmed = true;
         await this.saveSettings();
         if (this.settingTab) this.settingTab.display();
-        new Notice(chosen.length ? `\u5DF2\u8BBE\u4E3A\u53EA\u540C\u6B65\uFF1A${chosen.join("\u3001")}` : "\u5DF2\u8BBE\u4E3A\u540C\u6B65\u5168\u90E8\u6536\u85CF");
+        new Notice(chosen.length ? `\u5DF2\u8BBE\u4E3A\u53EA\u540C\u6B65\uFF1A${chosen.map((id) => cfg.collectionLabels[id] || id).join("\u3001")}` : "\u5DF2\u8BBE\u4E3A\u540C\u6B65\u5168\u90E8\u6536\u85CF");
       }).open();
     } catch (e) {
       this._log("error", `\u8BFB\u53D6\u4E13\u8F91\u5931\u8D25\uFF1A${e && e.stack || e}`);
@@ -6420,10 +6778,19 @@ var ClipinPlugin = class extends Plugin {
       ...loaded,
       platforms: { ...DEFAULT_SETTINGS.platforms, ...loaded.platforms || {} },
       target: { ...DEFAULT_SETTINGS.target, ...loaded.target || {} },
-      ai: { ...DEFAULT_SETTINGS.ai, ...loaded.ai || {} }
+      ai: { ...DEFAULT_SETTINGS.ai, ...loaded.ai || {}, provider: loaded.ai ? aiPresets.inferProvider(loaded.ai) : "qwen" },
+      vision: { ...DEFAULT_SETTINGS.vision, ...loaded.vision || {} },
+      transcription: { ...DEFAULT_SETTINGS.transcription, key: loaded.dashscopeKey || "", ...loaded.transcription || {} }
     };
+    if (String(this.settings.ai.key || "").startsWith("sv_")) {
+      this.settings.cloudAi ||= { ...this.settings.ai };
+      this.settings.ai = { ...DEFAULT_SETTINGS.ai, enabled: this.settings.ai.enabled };
+    }
     for (const id of PLATFORM_ORDER) {
       this.settings.platforms[id] = { ...DEFAULT_SETTINGS.platforms[id], ...this.settings.platforms[id] || {} };
+    }
+    for (const id of ["twitter", "xiaoyuzhou"]) {
+      if (this.settings.platforms[id]) this.settings.platforms[id].enabled = false;
     }
     this.settings.target.obsidian = { ...DEFAULT_SETTINGS.target.obsidian, ...this.settings.target.obsidian || {} };
     this.settings.target.notion = { ...DEFAULT_SETTINGS.target.notion, ...this.settings.target.notion || {} };
@@ -6460,6 +6827,7 @@ var ClipinPlugin = class extends Plugin {
     }
     return core.createObsidianTarget({
       vault: this.app.vault,
+      metadataCache: this.app.metadataCache,
       http: this.http,
       opts: {
         localizeCover: t.obsidian.localizeCover,
@@ -6488,6 +6856,7 @@ var ClipinPlugin = class extends Plugin {
       }
     } catch (_) {
     }
+    if (this.settingTab) this.settingTab.display();
   }
   /** 同步单个平台 */
   /**
@@ -6577,6 +6946,10 @@ var ClipinPlugin = class extends Plugin {
     }
   }
   async syncOne(platformId, opts) {
+    if (!PLATFORM_ORDER.includes(platformId)) {
+      new Notice("\u5F53\u524D\u7248\u672C\u4EC5\u652F\u6301\u5C0F\u7EA2\u4E66\u548C B \u7AD9");
+      return;
+    }
     const o = opts || {};
     const p = core.getProvider(platformId);
     if (!p) {
@@ -6676,9 +7049,10 @@ var ClipinPlugin = class extends Plugin {
           // fetchComments 可能是 true 但 optIn 是 false → 默认不跑，不会一开就崩。
           // 想试的人在设置页打开开关（会看到警告）才会真的执行。
           fetchComments: !!(this.settings.fetchComments && this.settings.commentsOptIn),
-          asr: { apiKey: this.settings.dashscopeKey || "", model: "" },
+          asr: { ...this.settings.transcription, apiKey: this.settings.transcription.key },
+          vision: isPro && this.settings.vision.enabled ? { ...this.settings.vision, apiKey: this.settings.vision.key } : null,
           detail: true,
-          ai: isPro && this.settings.ai.enabled ? { enabled: true, baseUrl: this.settings.ai.baseUrl, apiKey: this.settings.ai.key, model: this.settings.ai.model } : { enabled: false }
+          ai: isPro && this.settings.ai.enabled ? { ...this.getAIConfig(), enabled: true, apiKey: this.getAIConfig().key } : { enabled: false }
         },
         renderOpts: {
           rootPath: this.settings.target.obsidian.savePath,
@@ -6942,11 +7316,29 @@ var ClipinPlugin = class extends Plugin {
     });
   }
   /** AI 接口探活 */
+  getAIConfig() {
+    const own = this.settings.ai;
+    return own.key ? own : { ...this.settings.cloudAi || own, enabled: own.enabled };
+  }
+  async redeemServiceCard(card) {
+    const r = await cloudService.redeem(this.http, card);
+    if (!await core.verifyLicenseCodeAsync(r.license)) throw Error("\u6388\u6743\u6821\u9A8C\u5931\u8D25\uFF0C\u8BF7\u8054\u7CFB\u5BA2\u670D");
+    this.settings.cloudAi = { enabled: true, baseUrl: r.baseUrl, key: r.key, model: r.model };
+    this.settings.ai.enabled = true;
+    this.settings.licenseKey = r.license;
+    this.settings.licenseValid = true;
+    this.settings.cloudBalance = r.balance;
+    await this.saveSettings();
+  }
+  async refreshServiceBalance() {
+    this.settings.cloudBalance = await cloudService.balance(this.http, this.settings.cloudAi?.key || this.settings.ai.key);
+    await this.saveSettings();
+  }
   async testAI() {
     return core.testConnection({
       http: this.http,
-      baseUrl: this.settings.ai.baseUrl,
-      apiKey: this.settings.ai.key
+      baseUrl: this.getAIConfig().baseUrl,
+      apiKey: this.getAIConfig().key
     });
   }
   /** Notion 连接测试 */
@@ -7061,7 +7453,7 @@ var ChatView = class extends ItemView {
       new Notice("\u5F53\u524D\u5199\u5165\u76EE\u6807\u662F Notion\uFF0C\u300C\u95EE\u6536\u85CF\u300D\u53EA\u652F\u6301 Obsidian \u6A21\u5F0F");
       return;
     }
-    const ai = s.ai || {};
+    const ai = this.plugin.getAIConfig();
     if (!ai.enabled || !ai.baseUrl || !ai.key) {
       new Notice("\u8BF7\u5148\u5728\u8BBE\u7F6E\u91CC\u5F00\u542F AI\uFF0C\u586B\u597D\u63A5\u53E3\u5730\u5740\u4E0E Key");
       return;
@@ -7247,7 +7639,7 @@ var CollectionPickerModal = class extends Modal {
     contentEl.empty();
     setModalSize(this, false);
     contentEl.createEl("h3", { text: "\u9009\u62E9\u8981\u540C\u6B65\u7684\u4E13\u8F91 / \u6536\u85CF\u5939" });
-    contentEl.createEl("p", { text: "\u4E00\u4E2A\u90FD\u4E0D\u52FE = \u540C\u6B65\u5168\u90E8\u6536\u85CF\u3002", cls: "clipin-tip" });
+    contentEl.createEl("p", { text: "\u52FE\u9009\u9700\u8981\u540C\u6B65\u7684\u6536\u85CF\u5939\uFF1B\u4E0D\u52FE\u9009\u5E76\u4FDD\u5B58\uFF0C\u5C06\u540C\u6B65\u5168\u90E8\u6536\u85CF\u3002", cls: "clipin-tip" });
     const list = contentEl.createDiv({ cls: "clipin-picker-list" });
     for (const it of this.items) {
       const key = String(it.id || it.title);
@@ -7257,7 +7649,8 @@ var CollectionPickerModal = class extends Modal {
       cb.onchange = () => {
         cb.checked ? this.selected.add(key) : this.selected.delete(key);
       };
-      row.createEl("span", { text: it.title + (it.count ? `\uFF08${it.count} \u6761\uFF09` : "") });
+      row.createEl("span", { text: it.title, cls: "savault-collection-title" });
+      row.createEl("span", { text: `${Number(it.count) || 0} \u6761`, cls: "savault-collection-count" });
     }
     const row2 = contentEl.createDiv({ cls: "clipin-btn-row" });
     const save = row2.createEl("button", { text: "\u4FDD\u5B58", cls: "mod-cta" });
@@ -7328,16 +7721,18 @@ var ClipinSettingTab = class extends PluginSettingTab {
     const s = plugin.settings;
     containerEl.empty();
     containerEl.addClass("clipin-settings");
-    containerEl.createEl("h2", { text: "\u77E5\u8BC6\u6865\u6881 Savault" });
+    const intro = containerEl.createDiv({ cls: "savault-intro" });
+    intro.createEl("h2", { text: "\u77E5\u8BC6\u6865\u6881 Savault" });
+    intro.createEl("p", { text: "\u628A\u5C0F\u7EA2\u4E66\u4E0E B \u7AD9\u6536\u85CF\uFF0C\u7559\u5728\u81EA\u5DF1\u7684\u77E5\u8BC6\u5E93\u3002", cls: "clipin-tip" });
     const pro = !!s.licenseValid;
     if (pro) {
-      containerEl.createEl("p", { text: "\u2705 \u6C38\u4E45\u7248\u5DF2\u6FC0\u6D3B\uFF1A\u5168\u5E73\u53F0\u65E0\u9650\u540C\u6B65 + \u9010\u5B57\u7A3F + AI \u603B\u7ED3", cls: "clipin-pro" });
+      containerEl.createEl("p", { text: "\u2705 \u6C38\u4E45\u7248\u5DF2\u6FC0\u6D3B\uFF1A\u5C0F\u7EA2\u4E66\u4E0E B \u7AD9\u65E0\u9650\u540C\u6B65 + \u9010\u5B57\u7A3F + AI \u603B\u7ED3", cls: "clipin-pro" });
     } else {
       containerEl.createEl("p", {
         text: `\u514D\u8D39\u7248\uFF1A\u7D2F\u8BA1\u53EF\u540C\u6B65 ${FREE_QUOTA} \u6761\uFF08\u5DF2\u7528 ${s.syncedCount || 0}/${FREE_QUOTA}\uFF09`
       });
       const tipEl = containerEl.createEl("p", { cls: "clipin-tip" });
-      tipEl.appendText("\u6C38\u4E45\u7248\uFF1A\u5168\u5E73\u53F0\u65E0\u9650\u540C\u6B65 + \u9010\u5B57\u7A3F + AI \u603B\u7ED3 \u2192 ");
+      tipEl.appendText("\u6C38\u4E45\u7248\uFF1A\u5C0F\u7EA2\u4E66\u4E0E B \u7AD9\u65E0\u9650\u540C\u6B65 + \u9010\u5B57\u7A3F + AI \u603B\u7ED3 \u2192 ");
       const tipLink = tipEl.createEl("a", { text: "product.aiprice.store/bili", href: "https://product.aiprice.store/bili" });
       tipLink.onClickEvent((e) => {
         e.preventDefault();
@@ -7379,7 +7774,7 @@ var ClipinSettingTab = class extends PluginSettingTab {
         o.localizeCover = v;
         await plugin.saveSettings();
       }));
-      new Setting(containerEl).setName("\u4F5C\u8005\u53CC\u94FE").setDesc("\u628A\u4F5C\u8005\u6E32\u67D3\u6210 [[\u53CC\u94FE]]\uFF0C\u8BA9\u7B14\u8BB0\u8FDB\u5165\u56FE\u8C31\uFF08\u7ADE\u54C1\u6CA1\u6709\u8FD9\u4E2A\uFF09").addToggle((g) => g.setValue(o.linkAuthor).onChange(async (v) => {
+      new Setting(containerEl).setName("\u4F5C\u8005\u53CC\u94FE").setDesc("\u628A\u4F5C\u8005\u6E32\u67D3\u6210 [[\u53CC\u94FE]]\uFF0C\u8BA9\u7B14\u8BB0\u8FDB\u5165\u56FE\u8C31").addToggle((g) => g.setValue(o.linkAuthor).onChange(async (v) => {
         o.linkAuthor = v;
         await plugin.saveSettings();
       }));
@@ -7409,7 +7804,7 @@ var ClipinSettingTab = class extends PluginSettingTab {
     }
     containerEl.createEl("h2", { text: "\u540C\u6B65\u54EA\u4E9B\u5E73\u53F0" });
     containerEl.createEl("p", {
-      text: "\u9ED8\u8BA4\u53EA\u5F00\u5C0F\u7EA2\u4E66\uFF1A\u5B83\u662F\u76EE\u524D\u552F\u4E00\u5168\u94FE\u8DEF\u771F\u673A\u8DD1\u901A\u7684\u5E73\u53F0\uFF08\u5217\u8868 \u2192 \u8BE6\u60C5 \u2192 \u8BC4\u8BBA \u2192 \u8F6C\u5199 \u2192 \u603B\u7ED3\uFF09\u3002B \u7AD9\u3001\u5C0F\u5B87\u5B99\u3001X \u7684\u6807\u6CE8\u89C1\u5404\u81EA\u5361\u7247\uFF0C\u672A\u5B8C\u6210\u7684\u9ED8\u8BA4\u5173\u95ED\u3002",
+      text: "\u9009\u62E9\u5C0F\u7EA2\u4E66\u6216 B \u7AD9\uFF0C\u767B\u5F55\u540E\u6309\u6536\u85CF\u5939\u8BBE\u7F6E\u540C\u6B65\u8303\u56F4\u3002B \u7AD9\u4ECD\u5904\u4E8E\u6D4B\u8BD5\u9636\u6BB5\u3002",
       cls: "clipin-tip"
     });
     for (const id of PLATFORM_ORDER) {
@@ -7511,7 +7906,7 @@ var ClipinSettingTab = class extends PluginSettingTab {
         }
         if (p.capabilities && p.capabilities.collections) {
           const sel = cfg.collections || [];
-          new Setting(containerEl).setName("\u3000\u540C\u6B65\u8303\u56F4").setDesc(sel.length ? "\u53EA\u540C\u6B65\uFF1A" + sel.join("\u3001") : "\u5168\u90E8\u6536\u85CF\uFF08\u70B9\u300C\u9009\u62E9\u4E13\u8F91\u300D\u6311\uFF0C\u4E00\u4E2A\u4E0D\u52FE = \u5168\u90E8\uFF09").addButton((b) => b.setButtonText(sel.length ? "\u91CD\u65B0\u9009\u62E9" : "\u9009\u62E9\u4E13\u8F91").onClick(async () => {
+          new Setting(containerEl).setName("\u3000\u540C\u6B65\u8303\u56F4").setDesc(sel.length ? "\u53EA\u540C\u6B65\uFF1A" + sel.map((key) => (cfg.collectionLabels || {})[key] || key).join("\u3001") : "\u5168\u90E8\u6536\u85CF \xB7 \u53EF\u6309\u6536\u85CF\u5939\u9009\u62E9\u540C\u6B65\u8303\u56F4").addButton((b) => b.setButtonText(sel.length ? "\u91CD\u65B0\u9009\u62E9" : id === "bilibili" ? "\u9009\u62E9\u6536\u85CF\u5939" : "\u9009\u62E9\u4E13\u8F91").onClick(async () => {
             b.setButtonText("\u8BFB\u53D6\u4E2D\u2026").setDisabled(true);
             try {
               await plugin.promptChooseCollections(id);
@@ -7554,21 +7949,13 @@ var ClipinSettingTab = class extends PluginSettingTab {
         });
       }
     }
-    containerEl.createEl("h2", { text: "\u589E\u5F3A\u529F\u80FD\uFF08\u6C38\u4E45\u7248\uFF09" });
-    new Setting(containerEl).setName("\u540C\u6B65\u9010\u5B57\u7A3F").setDesc(pro ? "\u6293\u53D6\u5B57\u5E55\u5199\u5165\u7B14\u8BB0\uFF08\u6BCF\u4E2A\u6761\u76EE\u591A 2-3 \u6B21\u8BF7\u6C42\uFF0C\u4F1A\u6162\u4E00\u4E9B\uFF09\uFF1B\u5C0F\u7EA2\u4E66\u89C6\u9891\u8D70\u53E3\u64AD\u8F6C\u5199\uFF08\u9700\u914D dashscope key\uFF09" : "\u6C38\u4E45\u7248\u529F\u80FD").addToggle((g) => g.setValue(pro && s.fetchTranscript).setDisabled(!pro).onChange(async (v) => {
+    containerEl.createEl("h2", { text: "\u8F6C\u5199" });
+    new Setting(containerEl).setName("\u540C\u6B65\u9010\u5B57\u7A3F").setDesc(pro ? "\u6293\u53D6\u5B57\u5E55\u5199\u5165\u7B14\u8BB0\uFF08\u6BCF\u4E2A\u6761\u76EE\u591A 2-3 \u6B21\u8BF7\u6C42\uFF0C\u4F1A\u6162\u4E00\u4E9B\uFF09\uFF1B\u65E0\u5B57\u5E55\u7684\u89C6\u9891\u4F7F\u7528\u4E0B\u65B9\u8F6C\u5199\u670D\u52A1" : "\u6C38\u4E45\u7248\u529F\u80FD").addToggle((g) => g.setValue(pro && s.fetchTranscript).setDisabled(!pro).onChange(async (v) => {
       s.fetchTranscript = v;
       await plugin.saveSettings();
     }));
     if (pro) {
-      new Setting(containerEl).setName("\u3000\u53E3\u64AD\u8F6C\u5199 dashscope Key").setDesc("\u5C0F\u7EA2\u4E66\u89C6\u9891\u7B14\u8BB0\u7528\uFF1A\u963F\u91CC\u4E91\u767E\u70BC API key\uFF08Paraformer \u76F4\u63A5\u8BFB\u89C6\u9891 URL\uFF0C\u4E0D\u4E0B\u8F7D\u89C6\u9891\uFF09\u3002\u53EA\u5B58\u672C\u5730").addText((t) => {
-        t.setPlaceholder("sk-...").setValue(s.dashscopeKey || "").onChange(async (v) => {
-          s.dashscopeKey = v.trim();
-          await plugin.saveSettings();
-        });
-        t.inputEl.type = "password";
-      }).addButton((b) => b.setButtonText("\u83B7\u53D6 Key \u2197").onClick(() => {
-        require("electron").shell.openExternal("https://bailian.console.aliyun.com/#/api-key");
-      }));
+      aiSettings.transcriptionFields({ plugin, containerEl, Setting, refresh: () => this.display() });
       new Setting(containerEl).setName("\u3000\u540C\u6B65\u8BC4\u8BBA\uFF08\u9ED8\u8BA4\u5173\uFF09").setDesc("\u8BFB\u6BCF\u6761\u7B14\u8BB0\u7684\u7F6E\u9876/\u70ED\u8BC4\u5230\u300C\u7CBE\u9009\u8BC4\u8BBA\u300D\u533A\u5757\u3002v0.5.66 \u8D77**\u5DF2\u9A8C\u8BC1\u53EF\u7528**\uFF1A\u771F\u673A 3/3 \u6761\u8BFB\u5230\u8BC4\u8BBA\u3001\u8DF3\u8BE6\u60C5\u9875\u6EDA\u52A8\u5168\u7A0B\u4E0D\u5D29\u3002\u6253\u5F00\u5373\u5168\u91CF\u91C7\u96C6\uFF0835 \u6761\u5927\u7EA6\u591A\u82B1 2 \u5206\u949F\uFF0C\u6BCF\u6761\u4E4B\u95F4\u7559\u4E86\u968F\u673A\u95F4\u9694\uFF09\u3002\u8BC4\u8BBA\u662F\u968F\u8BE6\u60C5\u9875\u4E00\u8D77\u6E32\u67D3\u7684\uFF0C\u63D2\u4EF6\u76F4\u63A5\u4ECE\u9875\u9762\u8BFB\u53D6\uFF0C\u4E0D\u4F9D\u8D56\u63A5\u53E3").addToggle((g) => g.setValue(!!s.fetchComments).onChange(async (v) => {
         s.fetchComments = v;
         if (v) {
@@ -7584,38 +7971,58 @@ var ClipinSettingTab = class extends PluginSettingTab {
       s.silentCollect = v;
       await plugin.saveSettings();
     }));
-    new Setting(containerEl).setName("AI \u603B\u7ED3").setDesc(pro ? "\u7528\u4F60\u81EA\u5DF1\u7684 key \u8C03\u7528\u6A21\u578B\uFF0C\u81EA\u52A8\u751F\u6210\u6838\u5FC3\u89C2\u70B9/\u8981\u70B9/\u91D1\u53E5" : "\u6C38\u4E45\u7248\u529F\u80FD").addToggle((g) => g.setValue(pro && s.ai.enabled).setDisabled(!pro).onChange(async (v) => {
+    containerEl.createEl("h2", { text: "\u8BC6\u56FE" });
+    new Setting(containerEl).setName("\u540C\u6B65\u65F6\u8BC6\u522B\u56FE\u7247").setDesc("\u6BCF\u6761\u6700\u591A\u8BFB\u53D6\u524D 4 \u5F20\u56FE\u7247\uFF0C\u63D0\u53D6\u6587\u5B57\u4E0E\u91CD\u70B9\uFF1B\u5355\u72EC\u4F7F\u7528\u8BC6\u56FE\u914D\u7F6E\u3002").addToggle((t) => t.setValue(pro && s.vision.enabled).setDisabled(!pro).onChange(async (v) => {
+      s.vision.enabled = v;
+      await plugin.saveSettings();
+    }));
+    if (pro) aiSettings.providerFields({ plugin, containerEl, Setting, Notice, refresh: () => this.display(), field: "vision", kind: "vision" });
+    containerEl.createEl("h2", { text: "\u95EE\u7B54" });
+    containerEl.createEl("h2", { text: "\u4E91\u7AEF AI \u989D\u5EA6" });
+    let redeemInput;
+    new Setting(containerEl).setName("\u5151\u6362\u670D\u52A1\u5361").setDesc("\u5151\u6362\u540E\u81EA\u52A8\u5F00\u901A\u670D\u52A1\u5E76\u914D\u7F6E AI\u3002\u5151\u6362\u5361\u8BF7\u59A5\u5584\u4FDD\u7BA1\uFF0C\u91CD\u590D\u5151\u6362\u4E0D\u4F1A\u91CD\u590D\u8D60\u9001\u989D\u5EA6\u3002").addText((t) => {
+      redeemInput = t;
+      t.setPlaceholder("SVC_\u2026");
+      t.inputEl.type = "password";
+    }).addButton((b) => b.setButtonText("\u5151\u6362").setCta().onClick(async () => {
+      b.setDisabled(true).setButtonText("\u5151\u6362\u4E2D\u2026");
+      try {
+        await plugin.redeemServiceCard(redeemInput.getValue());
+        redeemInput.setValue("");
+        new Notice("\u5151\u6362\u6210\u529F\uFF0CAI \u5DF2\u914D\u7F6E");
+        this.display();
+      } catch (e) {
+        new Notice(e.message || "\u5151\u6362\u5931\u8D25\uFF0C\u8BF7\u7A0D\u540E\u91CD\u8BD5");
+      } finally {
+        b.setDisabled(false).setButtonText("\u5151\u6362");
+      }
+    }));
+    if (s.cloudAi?.key || String(s.ai.key || "").startsWith("sv_")) {
+      const amount = s.cloudBalance?.aiMicroYuanAvailable;
+      new Setting(containerEl).setName("AI \u5269\u4F59\u989D\u5EA6").setDesc(Number.isSafeInteger(amount) ? "\xA5" + (amount / 1e6).toFixed(4) : "\u70B9\u51FB\u5237\u65B0\u67E5\u770B\u989D\u5EA6").addButton((b) => b.setButtonText("\u5237\u65B0\u4F59\u989D").onClick(async () => {
+        b.setDisabled(true);
+        try {
+          await plugin.refreshServiceBalance();
+          this.display();
+        } catch (e) {
+          new Notice(e.message || "\u4F59\u989D\u67E5\u8BE2\u5931\u8D25");
+        } finally {
+          b.setDisabled(false);
+        }
+      }));
+    }
+    new Setting(containerEl).setName("AI \u603B\u7ED3").setDesc(pro ? "\u4F7F\u7528\u5151\u6362\u989D\u5EA6\u6216\u81EA\u5DF1\u7684 Key\uFF0C\u81EA\u52A8\u751F\u6210\u6838\u5FC3\u89C2\u70B9\u3001\u8981\u70B9\u548C\u91D1\u53E5" : "\u6C38\u4E45\u7248\u529F\u80FD").addToggle((g) => g.setValue(pro && s.ai.enabled).setDisabled(!pro).onChange(async (v) => {
       s.ai.enabled = v;
       await plugin.saveSettings();
     }));
     if (pro) {
-      new Setting(containerEl).setName("\u3000\u63A5\u53E3\u5730\u5740").setDesc("OpenAI \u517C\u5BB9\u63A5\u53E3\u3002\u4E0D\u77E5\u9053\u9009\u54EA\u5BB6\uFF1F\u70B9\u53F3\u8FB9\u6309\u94AE\u53BB\u6BD4\u4EF7").addButton((b) => b.setButtonText("\u53BB\u6BD4\u4EF7 \u2197").onClick(() => {
-        require("electron").shell.openExternal("https://product.aiprice.store/ask");
-      })).addText((t) => t.setValue(s.ai.baseUrl).onChange(async (v) => {
-        s.ai.baseUrl = v.trim();
-        await plugin.saveSettings();
-      }));
-      new Setting(containerEl).setName("\u3000API Key").setDesc("\u53EA\u5B58\u5728\u672C\u5730 vault\uFF0C\u4E0D\u4E0A\u4F20").addText((t) => {
-        t.setPlaceholder("sk-...").setValue(s.ai.key).onChange(async (v) => {
-          s.ai.key = v.trim();
-          await plugin.saveSettings();
-        });
-        t.inputEl.type = "password";
-      });
-      new Setting(containerEl).setName("\u3000\u6A21\u578B").setDesc("\u5982 deepseek-chat\u3002\u601D\u8003\u8FC7\u7A0B\u4F1A\u88AB\u81EA\u52A8\u5265\u79BB\uFF0C\u4E0D\u4F1A\u5199\u8FDB\u7B14\u8BB0").addText((t) => t.setValue(s.ai.model).onChange(async (v) => {
-        s.ai.model = v.trim();
-        await plugin.saveSettings();
-      }));
-      new Setting(containerEl).setName("\u3000\u8FDE\u63A5\u6D4B\u8BD5").addButton((b) => b.setButtonText("\u6D4B\u8BD5").onClick(async () => {
-        b.setButtonText("\u6D4B\u8BD5\u4E2D\u2026").setDisabled(true);
-        const r = await plugin.testAI();
-        new Notice((r.ok ? "\u2705 " : "\u274C ") + r.msg);
-        b.setButtonText("\u6D4B\u8BD5").setDisabled(false);
-      }));
+      aiSettings.providerFields({ plugin, containerEl, Setting, Notice, refresh: () => this.display(), field: "ai" });
+      new Setting(containerEl).setName("\u6A21\u578B\u8D39\u7528").addButton((b) => b.setButtonText("\u53BB\u6BD4\u4EF7 \u2197").onClick(() => require("electron").shell.openExternal("https://product.aiprice.store/ask")));
+      containerEl.createEl("p", { text: s.ai.key ? "\u5F53\u524D\u4F7F\u7528\u81EA\u5DF1\u7684 Key\uFF0C\u76F4\u63A5\u8C03\u7528\u6240\u9009\u5382\u5546\u3002" : s.cloudAi?.key ? "\u672A\u586B\u5199\u81EA\u5DF1\u7684 Key\uFF0C\u5F53\u524D\u4F7F\u7528\u4E91\u7AEF\u5151\u6362\u989D\u5EA6\u3002" : "\u586B\u5199\u81EA\u5DF1\u7684 Key \u6216\u5151\u6362\u670D\u52A1\u5361\u540E\u5373\u53EF\u4F7F\u7528\u3002", cls: "clipin-tip" });
     }
     containerEl.createEl("h2", { text: "\u95EE\u6536\u85CF" });
     containerEl.createEl("p", {
-      text: pro ? "\u7528\u4F60\u81EA\u5DF1\u7684 key\uFF0C\u76F4\u63A5\u95EE\u540C\u6B65\u8FDB\u6765\u7684\u6536\u85CF\u3002\u70B9\u5DE6\u4FA7\u300C\u6D88\u606F\u300D\u56FE\u6807\uFF0C\u6216\u547D\u4EE4\u9762\u677F\u641C\u300C\u95EE\u6536\u85CF\u300D\u3002" : "\u6C38\u4E45\u7248\u529F\u80FD\uFF1A\u7528\u4F60\u81EA\u5DF1\u7684 key \u76F4\u63A5\u95EE\u6536\u85CF\u5E93\u3002\u652F\u6301\u300C\u4E0A\u4E2A\u6708\u6536\u85CF\u7684 B\u7AD9\u89C6\u9891\u91CC\u54EA\u51E0\u4E2A\u8BB2\u4E86 X\u300D\u8FD9\u7C7B\u5E26\u5E73\u53F0\u3001\u4F5C\u8005\u3001\u65F6\u95F4\u7B5B\u9009\u7684\u63D0\u95EE\u2014\u2014\u901A\u7528 RAG \u63D2\u4EF6\u505A\u4E0D\u5230\uFF0C\u5B83\u4EEC\u8BFB\u4E0D\u5230\u7B14\u8BB0\u91CC\u7684\u6765\u6E90\u4FE1\u606F\u3002",
+      text: pro ? "\u4F7F\u7528\u5DF2\u914D\u7F6E\u7684 AI\uFF0C\u76F4\u63A5\u95EE\u540C\u6B65\u8FDB\u6765\u7684\u6536\u85CF\u3002\u70B9\u5DE6\u4FA7\u300C\u6D88\u606F\u300D\u56FE\u6807\uFF0C\u6216\u547D\u4EE4\u9762\u677F\u641C\u300C\u95EE\u6536\u85CF\u300D\u3002" : "\u6C38\u4E45\u7248\u529F\u80FD\uFF1A\u7528\u4F60\u81EA\u5DF1\u7684 key \u76F4\u63A5\u95EE\u6536\u85CF\u5E93\u3002\u652F\u6301\u300C\u4E0A\u4E2A\u6708\u6536\u85CF\u7684 B\u7AD9\u89C6\u9891\u91CC\u54EA\u51E0\u4E2A\u8BB2\u4E86 X\u300D\u8FD9\u7C7B\u5E26\u5E73\u53F0\u3001\u4F5C\u8005\u3001\u65F6\u95F4\u7B5B\u9009\u7684\u63D0\u95EE\u2014\u2014\u901A\u7528 RAG \u63D2\u4EF6\u505A\u4E0D\u5230\uFF0C\u5B83\u4EEC\u8BFB\u4E0D\u5230\u7B14\u8BB0\u91CC\u7684\u6765\u6E90\u4FE1\u606F\u3002",
       cls: "setting-item-description"
     });
     if (pro) {
