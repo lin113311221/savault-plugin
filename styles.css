@@ -200,3 +200,11 @@
   .clipin-settings .setting-item-control { width: 100%; justify-content: flex-start; }
   .clipin-settings .setting-item-control input[type="text"] { max-width: 100%; }
 }
+
+.savault-guide { margin: 20px 0; padding: 16px 18px; border: 1px solid var(--background-modifier-border); border-radius: 10px; background: var(--background-secondary); }
+.savault-guide > summary { cursor: pointer; font-weight: 650; color: var(--text-normal); line-height: 1.6; }
+.savault-guide-intro { color: var(--text-muted); font-size: var(--font-ui-small); }
+.savault-guide-step { border-top: 1px solid var(--background-modifier-border); padding: 12px 0; }
+.savault-guide-step summary { cursor: pointer; line-height: 1.6; }
+.savault-guide-step p { color: var(--text-muted); line-height: 1.8; margin: 10px 0; overflow-wrap: anywhere; }
+.savault-guide summary:focus-visible { outline: 2px solid var(--interactive-accent); outline-offset: 4px; }
