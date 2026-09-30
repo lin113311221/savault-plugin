@@ -1,92 +1,101 @@
-# 知识桥梁 Savault
+[English](README.md) | [简体中文](README.zh-CN.md)
 
-把你自己的收藏同步成知识库笔记：小红书 / B站 → Obsidian。Notion 接入仍在完善，暂不推荐作为主要同步目标。
+# Savault (知识桥梁)
 
-- 官网与下载：https://product.aiprice.store/clipin/
-- 免费版：50 条同步额度（元数据 + 封面本地化 + frontmatter + 增量同步）
-- 全功能码（内测期免费领，正式版 ¥99 买断）：无限同步 + 问收藏（AI 对话收藏库，BYOK）+ 逐字稿 + AI 总结
-- 老用户：旧 `B2O-` / `CLP-` 授权码继续有效；从 bili2obsidian 旧版升级时设置会自动迁移
+Turn your own saved collections into knowledge-base notes: Xiaohongshu / Bilibili → Obsidian. Notion integration is still being improved and is not currently recommended as the primary sync destination.
 
-## 安装
+- Website and download: https://product.aiprice.store/clipin/
+- Free edition: a 50-item sync allowance (metadata + local cover images + frontmatter + incremental sync)
+- Full-feature license code (free during beta; ¥99 for a one-time purchase in the official release): unlimited sync + Ask Your Collections (AI conversations with your collection library, BYOK) + transcripts + AI summaries
+- Existing users: old `B2O-` / `CLP-` license codes remain valid; settings are automatically migrated when upgrading from the old bili2obsidian version
 
-1. 下载 [最新 Release](https://github.com/lin113311221/savault-plugin/releases) 里的 `savault.zip`
-2. 在你的 Vault 下新建 `.obsidian/plugins/savault/` 目录，把 zip 里的 `main.js` / `manifest.json` / `styles.css` 解压进去
-3. Obsidian → 设置 → 第三方插件 → 关闭安全模式 → 刷新 → 启用「知识桥梁 Savault」
-4. 插件设置里配置平台凭证（见下方各平台教程）
+## Installation
 
-> 从旧版 Bili2Obsidian 升级：旧目录 `.obsidian/plugins/bili2obsidian/` 里的设置（含授权码）会在新版首次启动时自动迁移，旧目录保留不删。
+1. Download `savault.zip` from the [latest Release](https://github.com/lin113311221/savault-plugin/releases)
+2. Create `.obsidian/plugins/savault/` inside your Vault, then extract `main.js` / `manifest.json` / `styles.css` from the ZIP into that directory
+3. In Obsidian → Settings → Community plugins → turn off Safe mode → refresh → enable “知识桥梁 Savault”
+4. Configure platform credentials in the plugin settings (see the platform guides below)
 
-## 免打扰采集（v0.5.66 起，默认开）
+> Upgrading from the old Bili2Obsidian version: settings (including the license code) in `.obsidian/plugins/bili2obsidian/` are automatically migrated when the new version first starts. The old directory is retained.
 
-登录态有效时，同步**不再弹「开始读取」窗口**：插件在离屏页面里取数，同步完自动销毁，全程无窗口。
+## Collection Without Pop-up Windows (Enabled by Default Since v0.5.66)
 
-只有这三种情况才会弹窗让你登录：登录态校验没过、离屏页面起不来、一条数据都没读到（会自动重跑一次）。
+When the login session is valid, syncing **no longer opens the “Start reading” window**. The plugin reads data in an offscreen page and destroys it automatically after syncing, with no visible window throughout the process.
 
-设置页可关掉「免打扰采集」，退回每次弹窗确认的老行为。
+A login window appears only in three cases: session validation fails, the offscreen page cannot start, or no items are read (the plugin automatically retries once).
 
-## 各平台配置教程
+Turn off “免打扰采集” in settings to restore the previous behavior of showing a confirmation window for every sync.
 
-### 小红书
+## Platform Setup Guides
 
-**推荐方式：内嵌登录（最省心）**
+### Xiaohongshu
 
-插件设置 → 小红书 → 点「登录」按钮 → 弹出的窗口里用小红书 App 扫码登录 → 插件自动保存登录态。不需要手动复制任何 cookie。
+**Recommended: embedded login (the simplest option)**
 
-> 备选：如果内嵌登录不可用，手动复制 cookie：浏览器打开 xiaohongshu.com 并登录 → F12 → Network → 随便点一个请求 → 复制 Request Headers 里的完整 Cookie 字符串 → 粘贴到设置页的 Cookie 输入框。
+Plugin settings → Xiaohongshu → click “登录” → scan the QR code in the pop-up window with the Xiaohongshu app → the plugin automatically saves the login session. You do not need to copy any cookie manually.
 
-### B站
+> Alternative: if embedded login is unavailable, copy the cookie manually: open xiaohongshu.com in your browser and log in → F12 → Network → select any request → copy the complete Cookie string from Request Headers → paste it into the Cookie field in settings.
 
-**扫码登录（推荐）**：插件设置 → B站 → 点「扫码登录」→ 用 B站 App 扫弹出的二维码 → 自动保存。不需要手动找 SESSDATA。
+### Bilibili
 
-> 备选：手动填 SESSDATA：浏览器登录 bilibili.com → F12 → Application → Cookies → 找 `SESSDATA` 的值复制粘贴。
+**QR-code login (recommended)**: plugin settings → Bilibili → click “扫码登录” → scan the displayed QR code with the Bilibili app → the plugin saves the session automatically. You do not need to find SESSDATA manually.
 
-## 可选功能配置
+> Alternative: enter SESSDATA manually: log in to bilibili.com in your browser → F12 → Application → Cookies → copy and paste the value of `SESSDATA`.
 
-### 口播转写（视频→文字稿）
+## Optional Features
 
-把视频笔记的口播内容转成文字稿。需要阿里云百炼的 API Key：
+### Speech Transcription (Video → Transcript)
 
-1. 打开 [阿里云百炼控制台](https://bailian.console.aliyun.com/#/api-key) → 登录（可用支付宝/淘宝账号）
-2. 左侧「API-KEY」→ 创建新的 API Key → 复制 `sk-` 开头的字符串
-3. 粘贴到插件设置 → 「口播转写 dashscope Key」
-4. 打开「口播转写」开关
+Transcribe the spoken content in video notes. An Alibaba Cloud Model Studio API Key is required:
 
-> 转写用的是阿里云的 Paraformer 模型，直接读视频地址（不用下载视频）。费用及额度以供应商控制台为准；本版本未开放云端赠送分钟转写服务。
+1. Open the [Alibaba Cloud Model Studio console](https://bailian.console.aliyun.com/#/api-key) → log in (Alipay/Taobao accounts can be used)
+2. Select “API-KEY” on the left → create a new API Key → copy the string starting with `sk-`
+3. Paste it into plugin settings → “口播转写 dashscope Key”
+4. Turn on “口播转写”
 
-### 云端 AI 服务卡（v0.5.69）
+> Transcription uses Alibaba Cloud's Paraformer model and reads the video URL directly (without downloading the video). Check the provider console for fees and allowances; this version does not offer gifted cloud transcription minutes.
 
-拿到 SVC_ 开头的兑换卡，在设置页「云端 AI 额度」粘贴兑换。服务地址、个人 Token 和模型自动配置，支持刷新剩余额度。重复兑换不重复赠额。请保管好兑换卡，它可以找回同一服务凭证。
+### Cloud AI Service Cards (v0.5.69)
 
-软件授权与 AI 额度分别计算，旧授权码不会自动获得云端额度。云端服务仍受全站测试预算限制，套餐和开放范围以交付确认内容为准；赠送的云端音频转写未开放；用户自带硅基流动或 DashScope Key 可单独配置转写。
+If you have a redemption card starting with SVC_, paste it into “云端 AI 额度” in settings to redeem it. The service URL, personal Token, and model are configured automatically, and you can refresh the remaining allowance. Redeeming the same card again does not grant extra allowance. Keep the redemption card safe; it can recover the same service credentials.
 
-### AI 总结
+Software licensing and AI allowances are calculated separately. Old license codes do not automatically receive cloud allowances. The cloud service remains subject to the site-wide test budget; plans and availability are governed by the confirmed delivery terms. Gifted cloud audio transcription is not available; users can configure their own SiliconFlow or DashScope Key for transcription separately.
 
-同步时自动生成核心观点/要点。用你自己的大模型 API Key（BYOK）：
+### AI Summaries
 
-1. 在「问答」选择服务商：千问、GLM、MiniMax、Kimi、DeepSeek、硅基流动或自定义；预设自动填写地址和模型。
-2. 填该服务商的 API Key；用户 Key 优先直连，未填写时使用已兑换的云端文字额度。
-3. 打开「AI 总结」开关
+Automatically generate the main ideas and key points during syncing. Use your own LLM API Key (BYOK):
 
-### 同步评论（默认关）
+1. Under “问答”, choose a provider: Qwen, GLM, MiniMax, Kimi, DeepSeek, SiliconFlow, or custom; presets automatically fill in the URL and model.
+2. Enter that provider's API Key. A user-provided Key takes priority and connects directly; if no Key is entered, redeemed cloud text allowance is used.
+3. Turn on “AI 总结”
 
-读取笔记的置顶/热评，渲染到笔记的「精选评论」区块。很多笔记的关键信息（链接、工具名）在评论区。
+### Sync Comments (Off by Default)
 
-- 设置页 → 打开「同步评论」开关 → 下次同步就会逐条采集（默认关，不影响正文/转写/AI 总结）
-- 小红书的评论是**随详情页一起渲染进 DOM** 的，插件直接从页面读取，不依赖接口，所以很快（35 条大约多花 2 分钟，每条之间留了随机间隔）
-- v0.5.67 起全量采集。v0.5.63~v0.5.66 期间限量为前 3 条（当时在验证「跳详情页 + 滚动」会不会崩），真机 3/3 成功、滚动全程没崩，限量已放开
+Read pinned/popular comments and render them in the note's “精选评论” section. Key information in many notes, such as links and tool names, appears in comments.
 
-## 合规说明
+- Settings → turn on “同步评论” → the next sync collects comments item by item (off by default; it does not affect the body, transcription, or AI summaries)
+- Xiaohongshu comments are **rendered into the DOM with the detail page**. The plugin reads them directly from the page without relying on an API, so collection is quick (35 items took about 2 extra minutes, with random intervals between items)
+- Full comment collection has been enabled since v0.5.67. During v0.5.63~v0.5.66, collection was limited to the first 3 comments while testing whether “open detail page + scroll” would crash. Device testing succeeded in 3/3 cases with no crashes while scrolling, and the limit was removed
 
-本插件仅同步你自己账号可见的收藏内容，笔记保存在本地；启用 AI 时相关内容会发送到所配置的服务，仅供个人学习使用。不批量下载、不分发他人内容、不绕过任何付费或权限限制。请合理控制同步频率，勿用于商业抓取。
+## Compliance
 
-## 许可
+This plugin only syncs collections visible to your own account, and notes are saved locally. When AI is enabled, relevant content is sent to the configured service. Use it only for personal learning. Do not bulk-download or distribute other people's content, or bypass paywalls or access restrictions. Keep sync frequency reasonable and do not use it for commercial scraping.
 
-插件本体为专有软件（付费功能需授权码激活）；本仓库仅用于发布与反馈，欢迎开 Issue。
+## License
 
-### 三个 AI 入口
+The plugin itself is proprietary software (paid features require activation with a license code). This repository is only for releases and feedback; Issues are welcome.
 
-- 转写：只支持硅基流动与 DashScope，优先读取原生字幕。
-- 识图：单独配置服务商与 Key，每条笔记最多识别前 4 张图片。
-- 问答：用于总结和问收藏。千问预设为 qwen3.8-flash；赠送额度使用已验证的 Qwen/Qwen3.5-35B-A3B。
+### Three AI Entry Points
 
-三个入口配置独立；使用同一供应商账户时余额仍共享。切换服务商不会把旧厂商 Key 发给新厂商。
+- Transcription: supports SiliconFlow and DashScope only; native subtitles are read first.
+- Image recognition: configure the provider and Key separately; at most the first 4 images in each note are recognized.
+- Q&A: used for summaries and Ask Your Collections. The Qwen preset is qwen3.8-flash; gifted allowance uses the verified Qwen/Qwen3.5-35B-A3B.
+
+The three entry points are configured independently; balances remain shared when using the same provider account. Switching providers does not send the old provider's Key to the new provider.
+
+## Related Links
+
+- [Dream Bridge Lab](https://github.com/dreambridgelab)
+- [Savault Global](https://yourdreamlab.net/apps/savault/)
+
+The Global product page is a separate entry point. This repository continues to document the original proprietary Obsidian plugin, its releases, and its applicable terms.
