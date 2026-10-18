@@ -2,14 +2,14 @@
 
 # 知识桥梁 Savault — 收藏整理与 AI 知识使用
 
-## Windows 统一版 0.1.6
+## Windows / Mac 统一版 0.1.6
 
 [下载统一包与校验文件](https://github.com/lin113311221/savault-skills/releases/tag/desktop-v0.1.6) · [本地文件夹使用说明](docs/local-folder.md)
 
-一个 Windows 包包含 GUI 和 CLI，可保存到本地 Markdown 文件夹、Notion 或 Obsidian。无需安装笔记软件也可同步到本地，再授权 AI 读取；GUI 与 CLI 登录和配置分别保存。Mac 沿用原版预览包。
+Windows 和 Mac 的每个下载包均包含 GUI 和 CLI，可保存到本地 Markdown 文件夹、Notion 或 Obsidian。无需安装笔记软件也可同步到本地，再授权 AI 读取；GUI 与 CLI 登录和配置分别保存。Mac 支持 macOS 13 及以上的 Apple 芯片和 Intel 机型。
 
 
-把选定的小红书、B站收藏整理进 Obsidian，本仓库提供插件发行与问题反馈。Savault 另有 Windows 统一客户端（含 CLI），以及供 Agent 调用的收藏同步 Skill。
+把选定的小红书、B站收藏整理进 Obsidian，本仓库提供插件发行与问题反馈。Savault 另有 Windows/Mac 统一客户端（含 CLI），以及供 Agent 调用的收藏同步 Skill。
 
 收藏中的写作方法、工作经验和学习资料，整理后可以授权给 Codex、WorkBuddy 等 AI 工具读取，用在你的具体任务里，并保留参考来源。
 
@@ -23,7 +23,7 @@
 | 你要做什么 | 入口 |
 |---|---|
 | 把收藏存成本地笔记、使用内置“问收藏” | Obsidian 插件 |
-| 把收藏存进本地文件夹、Notion 或 Obsidian | Windows 统一客户端，或收藏同步 Skill |
+| 把收藏存进本地文件夹、Notion 或 Obsidian | Windows/Mac 统一客户端，或收藏同步 Skill |
 | 让 AI 阅读同步后的 Notion 笔记 | 另行授权 Notion MCP 或相应读取连接器 |
 | 让 AI 阅读本地笔记 | 授予指定 Markdown 文件/文件夹读取权限 |
 
@@ -48,13 +48,13 @@ Savault 把收藏选择、同步、转写、识图和总结放在同一套使用
 - Savault 额度不包含 Codex、WorkBuddy 或 Notion 自身的订阅和模型费用。
 - 已有模型套餐，可继续在套餐支持的 AI 工具里使用，并授权读取同步后的笔记；不代表 Savault 已支持直接通用 GLM、百炼或 Kimi 套餐，详见接入指南。
 
-当前授权方案、购买状态、额度与版本以[产品页](https://product.aiprice.store/savault/)和对应版本说明为准；不沿用旧 README 的“内测免费领 / ¥99”口径。Mac Notion 客户端目前为预览版。
+当前授权方案、购买状态、额度与版本以[产品页](https://product.aiprice.store/savault/)和对应版本说明为准；不沿用旧 README 的“内测免费领 / ¥99”口径。Mac 统一版 0.1.6 支持 macOS 13+ 的 Apple 芯片与 Intel；采用 ad-hoc 签名，尚未完成 Apple 公证。
 
 ## 使用边界与反馈
 
 仅处理你有权访问的内容，尊重平台规则和原作者权利，不绕过访问限制或分发他人资料。启用 AI 时，相关内容会发送到所选模型服务。反馈请提供版本、复现步骤和脱敏错误，不提供账号凭证。
 
-插件本体为专有软件，本仓库用于发行与反馈，不因公开仓库而变成开源运行时。Windows 统一包在 savault-skills 发布；本仓保留独立 Obsidian 插件发行。
+插件本体为专有软件，本仓库用于发行与反馈，不因公开仓库而变成开源运行时。Windows/Mac 统一包在 savault-skills 发布；本仓保留独立 Obsidian 插件发行。
 
 ## Related links
 

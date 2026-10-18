@@ -2,14 +2,14 @@
 
 # Savault — Saved collections for your knowledge base and AI
 
-## Windows unified 0.1.6
+## Windows and Mac unified 0.1.6
 
 [Download package and checksums](https://github.com/lin113311221/savault-skills/releases/tag/desktop-v0.1.6) · [Local folder guide](docs/local-folder.md)
 
-One Windows package includes GUI and CLI, with local Markdown, Notion and Obsidian destinations. Local mode needs no note-taking app; grant your AI tool folder access after syncing. GUI and CLI profiles remain separate. Mac retains its earlier packages.
+Each Windows or Mac package includes GUI and CLI, with local Markdown, Notion and Obsidian destinations. Local mode needs no note-taking app; grant your AI tool folder access after syncing. GUI and CLI profiles remain separate. Mac supports macOS 13+ on Apple silicon and Intel.
 
 
-Organize selected Xiaohongshu and Bilibili collections into local Obsidian notes. This repository distributes the proprietary plugin and tracks issues. Savault also offers a Windows unified desktop/CLI and a collection-sync Agent Skill.
+Organize selected Xiaohongshu and Bilibili collections into local Obsidian notes. This repository distributes the proprietary plugin and tracks issues. Savault also offers a Windows/Mac unified desktop/CLI and a collection-sync Agent Skill.
 
 After you authorize a compatible AI host to read your notes, Codex, WorkBuddy, or another tool can use the methods and sources you saved in a concrete task.
 
@@ -23,7 +23,7 @@ After you authorize a compatible AI host to read your notes, Codex, WorkBuddy, o
 | Task | Interface |
 |---|---|
 | Save local notes and use built-in Ask Your Collections | Obsidian plugin |
-| Sync into Notion | Windows unified app or collection-sync Skill |
+| Sync into Notion | Windows/Mac unified app or collection-sync Skill |
 | Let an Agent read synced Notion pages | Separately authorized Notion MCP or another read connector |
 | Let an Agent read local notes | Access to selected Markdown files/folders |
 
@@ -48,13 +48,13 @@ Savault combines collection selection, syncing, transcription, image understandi
 - Savault credits do not cover Codex, WorkBuddy, or Notion subscriptions or model usage.
 - Keep using an existing model plan in a provider-supported AI client and authorize that client to read your notes. This does not establish direct Savault compatibility with GLM, Bailian, or Kimi plans; see the connection guide.
 
-See the [product page](https://product.aiprice.store/savault/) and matching release notes for current licensing, purchase availability, allowances, and versions. The old beta-free / ¥99 wording no longer describes current offers. The Mac Notion client is currently a preview.
+See the [product page](https://product.aiprice.store/savault/) and matching release notes for current licensing, purchase availability, allowances, and versions. The old beta-free / ¥99 wording no longer describes current offers. Mac unified 0.1.6 supports Apple silicon and Intel on macOS 13+; it uses ad-hoc signing and is not Apple-notarized.
 
 ## Use and feedback
 
 Process only content you may access, follow platform rules, and respect authors' rights. Do not bypass access restrictions or redistribute others' material. AI features may send relevant content to the selected model provider. Include version, reproduction steps, and redacted errors in Issues; exclude credentials.
 
-The plugin remains proprietary. This public distribution repository does not open-source the runtime. The Windows unified runtime is distributed by savault-skills; this repository retains the separate Obsidian plugin releases.
+The plugin remains proprietary. This public distribution repository does not open-source the runtime. The Windows and Mac unified runtime is distributed by savault-skills; this repository retains the separate Obsidian plugin releases.
 
 ## Related links
 
