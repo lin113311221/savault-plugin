@@ -2,7 +2,14 @@
 
 # Savault — Saved collections for your knowledge base and AI
 
-Organize selected Xiaohongshu and Bilibili collections into local Obsidian notes. This repository distributes the proprietary plugin and tracks issues. Savault also offers a separate Notion desktop client and a Notion sync Agent Skill.
+## Windows unified 0.1.6
+
+[Download package and checksums](https://github.com/lin113311221/savault-skills/releases/tag/desktop-v0.1.6) · [Local folder guide](docs/local-folder.md)
+
+One Windows package includes GUI and CLI, with local Markdown, Notion and Obsidian destinations. Local mode needs no note-taking app; grant your AI tool folder access after syncing. GUI and CLI profiles remain separate. Mac retains its earlier packages.
+
+
+Organize selected Xiaohongshu and Bilibili collections into local Obsidian notes. This repository distributes the proprietary plugin and tracks issues. Savault also offers a Windows unified desktop/CLI and a collection-sync Agent Skill.
 
 After you authorize a compatible AI host to read your notes, Codex, WorkBuddy, or another tool can use the methods and sources you saved in a concrete task.
 
@@ -16,7 +23,7 @@ After you authorize a compatible AI host to read your notes, Codex, WorkBuddy, o
 | Task | Interface |
 |---|---|
 | Save local notes and use built-in Ask Your Collections | Obsidian plugin |
-| Sync into Notion | Separate Notion app or Notion sync Skill |
+| Sync into Notion | Windows unified app or collection-sync Skill |
 | Let an Agent read synced Notion pages | Separately authorized Notion MCP or another read connector |
 | Let an Agent read local notes | Access to selected Markdown files/folders |
 
@@ -32,7 +39,7 @@ Built-in Ask Your Collections is currently available only in the Obsidian plugin
 
 ## AI service choice and costs
 
-Savault combines collection selection, syncing, transcription, image understanding, and summaries in one workflow. Choose Notion or Obsidian to suit your habits and follow the connection steps above.
+Savault combines collection selection, syncing, transcription, image understanding, and summaries in one workflow. Choose local Markdown, Notion or Obsidian to suit your habits and follow the connection steps above.
 
 - Basic sync allows 50 newly created items; updates and skips do not consume that creation allowance.
 - AI features require an active paid entitlement, even with your own API key.
@@ -47,7 +54,7 @@ See the [product page](https://product.aiprice.store/savault/) and matching rele
 
 Process only content you may access, follow platform rules, and respect authors' rights. Do not bypass access restrictions or redistribute others' material. AI features may send relevant content to the selected model provider. Include version, reproduction steps, and redacted errors in Issues; exclude credentials.
 
-The plugin remains proprietary. This public distribution repository does not open-source the runtime. This documentation update does not change release binaries or claim fresh end-to-end validation.
+The plugin remains proprietary. This public distribution repository does not open-source the runtime. The Windows unified runtime is distributed by savault-skills; this repository retains the separate Obsidian plugin releases.
 
 ## Related links
 

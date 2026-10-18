@@ -2,7 +2,14 @@
 
 # 知识桥梁 Savault — 收藏整理与 AI 知识使用
 
-把选定的小红书、B站收藏整理进 Obsidian，本仓库提供插件发行与问题反馈。Savault 另有 Notion 独立客户端，以及供 Agent 调用的 Notion 同步 Skill。
+## Windows 统一版 0.1.6
+
+[下载统一包与校验文件](https://github.com/lin113311221/savault-skills/releases/tag/desktop-v0.1.6) · [本地文件夹使用说明](docs/local-folder.md)
+
+一个 Windows 包包含 GUI 和 CLI，可保存到本地 Markdown 文件夹、Notion 或 Obsidian。无需安装笔记软件也可同步到本地，再授权 AI 读取；GUI 与 CLI 登录和配置分别保存。Mac 沿用原版预览包。
+
+
+把选定的小红书、B站收藏整理进 Obsidian，本仓库提供插件发行与问题反馈。Savault 另有 Windows 统一客户端（含 CLI），以及供 Agent 调用的收藏同步 Skill。
 
 收藏中的写作方法、工作经验和学习资料，整理后可以授权给 Codex、WorkBuddy 等 AI 工具读取，用在你的具体任务里，并保留参考来源。
 
@@ -16,7 +23,7 @@
 | 你要做什么 | 入口 |
 |---|---|
 | 把收藏存成本地笔记、使用内置“问收藏” | Obsidian 插件 |
-| 把收藏存进 Notion | Notion 独立客户端，或 Notion 同步 Skill |
+| 把收藏存进本地文件夹、Notion 或 Obsidian | Windows 统一客户端，或收藏同步 Skill |
 | 让 AI 阅读同步后的 Notion 笔记 | 另行授权 Notion MCP 或相应读取连接器 |
 | 让 AI 阅读本地笔记 | 授予指定 Markdown 文件/文件夹读取权限 |
 
@@ -32,7 +39,7 @@
 
 ## 少拼流程，AI 服务可以自己选
 
-Savault 把收藏选择、同步、转写、识图和总结放在同一套使用流程里。Notion / Obsidian 按你的习惯选择，按上面的步骤连接即可开始。
+Savault 把收藏选择、同步、转写、识图和总结放在同一套使用流程里。本地文件夹 / Notion / Obsidian 按你的习惯选择，按上面的步骤连接即可开始。
 
 - 基础同步可先体验，累计新增 50 条；更新和跳过不占新增额度。
 - AI 功能需有效付费授权，自带 API Key 也需要授权。
@@ -47,7 +54,7 @@ Savault 把收藏选择、同步、转写、识图和总结放在同一套使用
 
 仅处理你有权访问的内容，尊重平台规则和原作者权利，不绕过访问限制或分发他人资料。启用 AI 时，相关内容会发送到所选模型服务。反馈请提供版本、复现步骤和脱敏错误，不提供账号凭证。
 
-插件本体为专有软件，本仓库用于发行与反馈，不因公开仓库而变成开源运行时。本次文档更新未修改发行包或宣称新版全链路验收。
+插件本体为专有软件，本仓库用于发行与反馈，不因公开仓库而变成开源运行时。Windows 统一包在 savault-skills 发布；本仓保留独立 Obsidian 插件发行。
 
 ## Related links
 
