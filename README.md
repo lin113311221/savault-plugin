@@ -62,3 +62,11 @@ The plugin remains proprietary. This public distribution repository does not ope
 - [Savault Global](https://yourdreamlab.net/apps/savault/)
 
 The Global page is a separate entry point; this repository documents the Obsidian plugin and its applicable terms.
+
+## Contributor and Agent handoff
+
+Read [agentconversation.md](agentconversation.md) (Chinese) for repository responsibilities, source/version boundaries and a repeatable handoff. Keep this README and [README.zh-CN.md](README.zh-CN.md) aligned.
+
+Use a separate branch and submit a PR with the purpose and checks performed. The default branch requires a PR and one approving review, blocks force pushes and deletion, and retains the administrator exception. Public visitors can fork and propose changes; repository write access is granted separately.
+
+Do not include credentials, private notes or internal customer material in public examples, Issues or Agent handoffs.
