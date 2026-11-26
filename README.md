@@ -2,12 +2,13 @@
 
 # Savault — Saved collections for your knowledge base and AI
 
-## Windows and Mac unified 0.1.6
+## Downloads
 
-[Download package and checksums](https://github.com/lin113311221/savault-skills/releases/tag/desktop-v0.1.6) · [Local folder guide](docs/local-folder.md)
+The [official downloads page](https://product.aiprice.store/savault/#downloads) lists the Windows x64 desktop app with CLI (0.1.10), macOS 13+ previews for Apple silicon and Intel (0.1.10), and the desktop Obsidian plugin (0.5.75). The Douyin collection and share-link features are in preview. Start with one item and check the resulting note and source link.
 
-Each Windows or Mac package includes GUI and CLI, with local Markdown, Notion and Obsidian destinations. Local mode needs no note-taking app; grant your AI tool folder access after syncing. GUI and CLI profiles remain separate. Mac supports macOS 13+ on Apple silicon and Intel.
+Replace `YOUR-DOWNLOAD.zip` in the commands below with the ZIP you downloaded. Match its filename to the [official SHA-256 list](https://product.aiprice.store/savault/downloads/SHA256SUMS.txt). Use `Get-FileHash ./YOUR-DOWNLOAD.zip -Algorithm SHA256` on Windows or `shasum -a 256 ./YOUR-DOWNLOAD.zip` on macOS to compare the digest before extracting. For your first Markdown note, follow the [local folder guide](https://product.aiprice.store/savault/#local-guide).
 
+The [v0.5.71 GitHub release](https://github.com/lin113311221/savault-plugin/releases/tag/v0.5.71) contains an older plugin. Use its assets when you specifically need that version.
 
 Organize selected Xiaohongshu and Bilibili collections into local Obsidian notes. This repository distributes the proprietary plugin and tracks issues. Savault also offers a Windows/Mac unified desktop/CLI and a collection-sync Agent Skill.
 
@@ -27,7 +28,7 @@ After you authorize a compatible AI host to read your notes, Codex, WorkBuddy, o
 | Let an Agent read synced Notion pages | Separately authorized Notion MCP or another read connector |
 | Let an Agent read local notes | Access to selected Markdown files/folders |
 
-Built-in Ask Your Collections is currently available only in the Obsidian plugin. **This repository does not publish it as a Q&A MCP server.** The sync Skill is not a Q&A MCP either. Importing notes does not train a model or automatically install them as Agent Skills.
+The current desktop app and Obsidian plugin both offer Ask Your Collections with an active AI entitlement. **This repository does not publish it as a Q&A MCP server.** The sync Skill is not a Q&A MCP either. Importing notes does not train a model or automatically install them as Agent Skills.
 
 ## Install and try one item
 
@@ -48,20 +49,20 @@ Savault combines collection selection, syncing, transcription, image understandi
 - Savault credits do not cover Codex, WorkBuddy, or Notion subscriptions or model usage.
 - Keep using an existing model plan in a provider-supported AI client and authorize that client to read your notes. This does not establish direct Savault compatibility with GLM, Bailian, or Kimi plans; see the connection guide.
 
-See the [product page](https://product.aiprice.store/savault/) and matching release notes for current licensing, purchase availability, allowances, and versions. The old beta-free / ¥99 wording no longer describes current offers. Mac unified 0.1.6 supports Apple silicon and Intel on macOS 13+; it uses ad-hoc signing and is not Apple-notarized.
+See the [product page](https://product.aiprice.store/savault/) and matching release notes for current licensing, purchase availability, allowances, and versions. The old beta-free / ¥99 wording no longer describes current offers. The macOS preview is not Apple-notarized. Follow the first-launch instructions on the official download page.
 
 ## Use and feedback
 
 Process only content you may access, follow platform rules, and respect authors' rights. Do not bypass access restrictions or redistribute others' material. AI features may send relevant content to the selected model provider. Include version, reproduction steps, and redacted errors in Issues; exclude credentials.
 
-The plugin remains proprietary. This public distribution repository does not open-source the runtime. The Windows and Mac unified runtime is distributed by savault-skills; this repository retains the separate Obsidian plugin releases.
+The plugin remains proprietary. This public distribution repository does not open-source the runtime. The Agent Skill pins its [Windows and Mac runtime to 0.1.6](https://github.com/lin113311221/savault-skills/releases/tag/desktop-v0.1.6). This repository keeps the Obsidian plugin release history.
 
 ## Related links
 
 - [Dream Bridge Lab](https://github.com/dreambridgelab)
 - [Savault Global](https://yourdreamlab.net/apps/savault/)
 
-The Global page is a separate entry point; this repository documents the Obsidian plugin and its applicable terms.
+Savault Global is a separate English-language CLI for saving your own YouTube playlists to Markdown. This repository distributes the Obsidian plugin.
 
 ## Contributor and Agent handoff
 
